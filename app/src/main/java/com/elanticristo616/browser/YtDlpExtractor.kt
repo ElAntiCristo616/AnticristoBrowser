@@ -130,12 +130,13 @@ object YtDlpExtractor {
             hasUrl(f) && f.vcodec != null && f.vcodec != "none" &&
                 f.acodec != null && f.acodec != "none"
 
-        // 1) MP4 combinado, una opción por altura
+        // 1) MP4 combinado, una opción por altura (el primer formato
+        // de cada altura: los combinados de la misma altura son
+        // equivalentes para la tele).
         formats.filter { isCombined(it) && it.ext == "mp4" && it.height > 0 }
             .groupBy { it.height }
             .forEach { (h, list) ->
-                val best = list.maxByOrNull { it.filesize ?: it.filesizeApprox ?: 0L }
-                    ?: list.first()
+                val best = list.first()
                 out += QualityOption(h, best.url!!, "mp4")
             }
 
