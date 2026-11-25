@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Anticristo Browser</string>
+    <string name="about">Anticristo Browser v1.0.0\n\nNavegador simple con buscador DuckDuckGo y transmisión de videos a la tele por el canal receptor «Web Video Caster - Receiver» (gratis en la tienda Roku).\n\nSin cuentas, sin sincronización, sin configuraciones: solo el buscador y entrar a cualquier página.\n\nCódigo abierto (GPL-3.0) por yt-dlp: https://github.com/ElAntiCristo616/AnticristoBrowser</string>
+</resources>

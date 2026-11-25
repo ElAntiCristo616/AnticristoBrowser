@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <Button
+                android:id="@+id/btnVolver"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:backgroundTint="@color/pine_light"
+                android:text="‹ Volver"
+                android:textColor="@color/snow_white" />
+
+            <EditText
+                android:id="@+id/etDireccion"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/card_bg"
+                android:hint="Busca o escribe una dirección"
+                android:imeOptions="actionGo"
+                android:inputType="textUri"
+                android:textColor="@color/snow_white"
+                android:textColorHint="@color/sage" />
+
+            <Button
+                android:id="@+id/btnIr"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="@color/red_accent"
+                android:text="Ir"
+                android:textColor="@color/snow_white" />
+        </LinearLayout>
+
+        <WebView
+            android:id="@+id/webView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:id="@+id/detectedCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/card_bg"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Video detectado en esta página"
+                        android:textColor="@color/snow_white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvDetectedUrl"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="middle"
+                        android:maxLines="2"
+                        android:textColor="@color/sage"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="CALIDAD DE VIDEO"
+                        android:textColor="@color/sage"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="10dp" />
+
+                    <LinearLayout
+                        android:id="@+id/qualityChips"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+
+                    <TextView
+                        android:id="@+id/tvQualityInfo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textColor="@color/sage"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btnTransmitirDetectado"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:backgroundTint="@color/red_accent"
+                        android:text="📺 Transmitir este video a la tele"
+                        android:textColor="@color/snow_white" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/card_bg"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:layout_marginTop="8dp">
+
+                    <EditText
+                        android:id="@+id/etEnlace"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/card_bg"
+                        android:hint="Pega un enlace (YouTube, TikTok, X…)"
+                        android:inputType="textUri"
+                        android:textColor="@color/snow_white"
+                        android:textColorHint="@color/sage" />
+
+                    <Button
+                        android:id="@+id/btnTransmitirEnlace"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="@color/red_accent"
+                        android:text="Transmitir enlace a la tele"
+                        android:textColor="@color/snow_white" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <Button
+                        android:id="@+id/btnCastPausa"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:backgroundTint="@color/pine_light"
+                        android:text="Pausa"
+                        android:textColor="@color/snow_white" />
+
+                    <Button
+                        android:id="@+id/btnCastSeguir"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:backgroundTint="@color/pine_light"
+                        android:text="Seguir"
+                        android:textColor="@color/snow_white" />
+
+                    <Button
+                        android:id="@+id/btnCastParar"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:backgroundTint="@color/pine_light"
+                        android:text="Parar"
+                        android:textColor="@color/snow_white" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvCastStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Abre una página con video y te aviso para transmitirlo."
+                    android:textColor="@color/sage"
+                    android:textSize="13sp"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <com.elanticristo616.browser.SnowView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false" />
+
+</FrameLayout>
