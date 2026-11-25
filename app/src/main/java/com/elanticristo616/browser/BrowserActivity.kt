@@ -32,6 +32,10 @@ import org.json.JSONArray
  *  - Al empezar a transmitir se PAUSA el video del teléfono para que
  *    la tele no se pause sola, y se mandan SIEMPRE los headers del
  *    video (User-Agent, Referer, Origin) al receptor.
+ * Sin configuración: no hay menú ni pantalla de ajustes en la app y
+ * el buscador es fijo DuckDuckGo. La página de ajustes del propio
+ * DuckDuckGo (duckduckgo.com/settings*) está bloqueada: no se carga
+ * y se avisa. Los inicios de sesión (p. ej. Gmail) NO se bloquean.
  */
 class BrowserActivity : AppCompatActivity() {
 
@@ -78,8 +82,14 @@ class BrowserActivity : AppCompatActivity() {
 
         setupWebView()
         val startUrl = intent.getStringExtra("url") ?: "https://duckduckgo.com"
-        binding.webView.loadUrl(startUrl)
-        binding.etDireccion.setText(startUrl)
+        if (isSettingsBloqueada(startUrl)) {
+            avisoConfigBloqueada()
+            binding.webView.loadUrl("https://duckduckgo.com")
+            binding.etDireccion.setText("https://duckduckgo.com")
+        } else {
+            binding.webView.loadUrl(startUrl)
+            binding.etDireccion.setText(startUrl)
+        }
     }
 
     override fun onResume() {
@@ -113,6 +123,18 @@ class BrowserActivity : AppCompatActivity() {
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
             webViewClient = object : WebViewClient() {
+                /** La página de ajustes de DuckDuckGo no se carga. */
+                override fun shouldOverrideUrlLoading(
+                    view: WebView,
+                    request: WebResourceRequest
+                ): Boolean {
+                    if (isSettingsBloqueada(request.url.toString())) {
+                        avisoConfigBloqueada()
+                        return true
+                    }
+                    return false
+                }
+
                 override fun onPageFinished(view: WebView, url: String) {
                     currentUrl = url
                     binding.etDireccion.setText(url)
@@ -153,7 +175,33 @@ class BrowserActivity : AppCompatActivity() {
             else -> "https://duckduckgo.com/?q=" +
                 java.net.URLEncoder.encode(t, "UTF-8")
         }
+        if (isSettingsBloqueada(url)) {
+            avisoConfigBloqueada()
+            return
+        }
         binding.webView.loadUrl(url)
+    }
+
+    // ---------- Configuración bloqueada ----------
+
+    /** ¿Es la página de ajustes de DuckDuckGo? (duckduckgo.com/settings*)
+     *  Los inicios de sesión y el resto de páginas NO se bloquean. */
+    private fun isSettingsBloqueada(url: String): Boolean {
+        return try {
+            val uri = android.net.Uri.parse(url)
+            val host = (uri.host ?: "").lowercase()
+            val isDdg = host == "duckduckgo.com" || host.endsWith(".duckduckgo.com")
+            if (!isDdg) return false
+            val path = uri.path ?: ""
+            path == "/settings" || path.startsWith("/settings/") ||
+                path.startsWith("/settings.") || path.startsWith("/settings?")
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun avisoConfigBloqueada() {
+        Toast.makeText(this, "La configuración está bloqueada", Toast.LENGTH_SHORT).show()
     }
 
     // ---------- Detección de video ----------

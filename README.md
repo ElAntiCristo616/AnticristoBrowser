@@ -1,4 +1,4 @@
-# Anticristo Browser
+# CuteNovna Browser
 
 Navegador simple para Android con buscador DuckDuckGo y transmisión de
 videos a la tele por el canal receptor «Web Video Caster - Receiver»

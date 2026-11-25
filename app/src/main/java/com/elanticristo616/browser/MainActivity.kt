@@ -10,7 +10,7 @@ import com.elanticristo616.browser.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
 /**
- * Anticristo Browser v1.0.1 — PANTALLA 1: LA PUERTA.
+ * CuteNovna Browser v1.0.1 — PANTALLA 1: LA PUERTA.
  *
  * La IP de la tele es el requisito para entrar al portal: esta
  * pantalla es SOLO «Conectar a la tele», nada más. Sin buscador,

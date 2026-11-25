@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.elanticristo616.browser.databinding.ActivityPortalBinding
 
 /**
- * Anticristo Browser v1.0.1 — PANTALLA 2: EL PORTAL.
+ * CuteNovna Browser v1.0.1 — PANTALLA 2: EL PORTAL.
  *
  * Solo se entra aquí después de conectar la tele en la puerta
  * (MainActivity). Lobby de DuckDuckGo: buscador en píldora blanca

@@ -41,7 +41,7 @@ class WvcReceiver(
     suspend fun deviceConnect(): Int =
         client.postInputCode(
             "cmd=deviceConnect" +
-                "&welcomeMessage=${enc("Anticristo Browser")}" +
+                "&welcomeMessage=${enc("CuteNovna Browser")}" +
                 "&callback=${enc(callback)}"
         )
 
