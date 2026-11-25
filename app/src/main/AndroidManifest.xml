@@ -26,6 +26,10 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".PortalActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".BrowserActivity"
             android:exported="false"
             android:screenOrientation="portrait" />

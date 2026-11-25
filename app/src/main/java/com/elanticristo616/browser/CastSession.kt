@@ -3,7 +3,7 @@ package com.elanticristo616.browser
 import java.util.UUID
 
 /**
- * Estado compartido entre la pantalla principal y el navegador:
+ * Estado compartido entre la puerta, el portal y el navegador:
  * la tele conectada, el servidor HTTP local (uno solo por proceso)
  * y el canal receptor con el que se está transmitiendo.
  */

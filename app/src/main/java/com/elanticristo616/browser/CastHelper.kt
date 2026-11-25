@@ -6,8 +6,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * El flujo completo de transmitir al canal receptor, usado igual por
- * la pantalla principal y por el navegador:
+ * El flujo completo de transmitir al canal receptor, usado por la
+ * pantalla de transmitir (navegador):
  *  1) levanta el servidor local (para el callback de estado),
  *  2) lanza el canal «Web Video Caster - Receiver» en la tele,
  *  3) lo saluda (deviceConnect) y le manda el video (play).

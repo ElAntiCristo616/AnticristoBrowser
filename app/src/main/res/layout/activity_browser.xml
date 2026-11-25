@@ -9,26 +9,46 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <!-- Reproductor de Video -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="8dp">
 
             <Button
                 android:id="@+id/btnVolver"
-                android:layout_width="wrap_content"
+                android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:backgroundTint="@color/pine_light"
-                android:text="‹ Volver"
-                android:textColor="@color/snow_white" />
+                android:text="‹"
+                android:textColor="@color/snow_white"
+                android:textSize="22sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Reproductor de Video"
+                android:textColor="@color/snow_white"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp">
 
             <EditText
                 android:id="@+id/etDireccion"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:layout_marginStart="8dp"
                 android:background="@drawable/card_bg"
                 android:hint="Busca o escribe una dirección"
                 android:imeOptions="actionGo"
@@ -114,13 +134,59 @@
                     <Button
                         android:id="@+id/btnTransmitirDetectado"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="56dp"
                         android:layout_marginTop="10dp"
-                        android:backgroundTint="@color/red_accent"
-                        android:text="📺 Transmitir este video a la tele"
-                        android:textColor="@color/snow_white" />
+                        android:background="@drawable/bg_red_pill"
+                        android:drawableStart="@drawable/ic_tv"
+                        android:drawablePadding="10dp"
+                        android:text="Transmitir este video a la tele"
+                        android:textColor="@color/snow_white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
+                <!-- Conectado a Roku TV -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/card_bg"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_tv" />
+
+                        <TextView
+                            android:id="@+id/tvConexionRoku"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Conectado a Roku TV"
+                            android:textColor="@color/sage"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvCastStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Abre una página con video y te aviso para transmitirlo."
+                        android:textColor="@color/sage"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <!-- Pega un enlace (yt-dlp) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -184,15 +250,6 @@
                         android:text="Parar"
                         android:textColor="@color/snow_white" />
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tvCastStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Abre una página con video y te aviso para transmitirlo."
-                    android:textColor="@color/sage"
-                    android:textSize="13sp"
-                    android:layout_marginTop="8dp" />
             </LinearLayout>
         </ScrollView>
     </LinearLayout>

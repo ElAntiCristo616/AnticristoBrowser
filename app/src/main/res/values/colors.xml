@@ -7,4 +7,7 @@
     <color name="snow_white">#FFFFFF</color>
     <color name="sage">#A8C3B5</color>
     <color name="gold">#F1CF75</color>
+    <color name="sage_card">#5F8A74</color>
+    <color name="ink">#1A1A1A</color>
+    <color name="hint_gray">#8A8A8A</color>
 </resources>

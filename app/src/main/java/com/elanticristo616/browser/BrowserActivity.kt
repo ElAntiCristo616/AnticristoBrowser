@@ -62,6 +62,8 @@ class BrowserActivity : AppCompatActivity() {
             return
         }
         client = RokuClient(ip)
+        binding.tvConexionRoku.text =
+            "Conectado a ${CastSession.rokuName ?: "Roku TV"}"
 
         binding.btnVolver.setOnClickListener { finish() }
         binding.btnIr.setOnClickListener { irA(binding.etDireccion.text.toString()) }
@@ -270,6 +272,9 @@ class BrowserActivity : AppCompatActivity() {
         for (opt in pendingOptions) {
             val chip = Button(this).apply {
                 text = opt.label
+                textSize = 13f
+                minWidth = 0
+                setPadding(0, 0, 0, 0)
                 val selected = opt.height == selectedHeight
                 backgroundTintList = ColorStateList.valueOf(
                     if (selected) 0xFFCD2D32.toInt() else 0xFF1A4A33.toInt()
@@ -280,10 +285,13 @@ class BrowserActivity : AppCompatActivity() {
                     mostrarCalidades()
                 }
             }
+            // Todos los chips caben en una sola fila (como el mockup):
+            // mismo ancho cada uno, se reparten el ancho disponible.
             val params = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { marginEnd = 8 }
+                0,
+                (48 * resources.displayMetrics.density).toInt(),
+                1f
+            ).apply { marginEnd = 4 }
             binding.qualityChips.addView(chip, params)
         }
     }

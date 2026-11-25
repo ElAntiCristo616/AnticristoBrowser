@@ -9,9 +9,12 @@ videos a la tele por el canal receptor «Web Video Caster - Receiver»
 - **Sin cuentas, sin sincronización, sin configuraciones**: solo el
   buscador crudo y entrar a cualquier página. Sin ajustes salvo
   «Acerca de».
-- **Página principal con las 1,731 páginas de yt-dlp** (lista oficial
-  completa, tal cual, incluida la sección de adultos), con buscador y
-  favicon por sitio. Al tocar un sitio, abre su página en el navegador.
+- **Dos pantallas**: la puerta pide solo la IP de la tele para entrar
+  (la comprueba con GET a /query/device-info y la guarda; al abrir
+  la app vuelve a entrar sola si la tele responde), y el portal trae
+  el buscador DuckDuckGo y los accesos rápidos (YouTube, TikTok,
+  Instagram, X, Facebook) con iconos incluidos en la app. «Cambiar»
+  en el portal vuelve a la puerta para meter otra IP.
 - **Detección de video** en la página (por red y por DOM) y campo para
   pegar un enlace (YouTube, TikTok, X, Instagram, Facebook…) con yt-dlp.
 - **Selector de calidad**: antes de transmitir muestra las calidades
