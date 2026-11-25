@@ -15,9 +15,9 @@ import androidx.appcompat.app.AppCompatActivity
 import com.elanticristo616.browser.databinding.ActivityPortalBinding
 
 /**
- * CuteNovna Browser v1.0.1 — PANTALLA 2: EL PORTAL.
+ * CuteNovna Browser v1.0.2 — PANTALLA 2: EL PORTAL.
  *
- * Solo se entra aquí después de conectar la tele en la puerta
+ * Solo se entra aquí después de poner la IP de la tele en la puerta
  * (MainActivity). Lobby de DuckDuckGo: buscador en píldora blanca
  * con botón rojo «Ir», accesos rápidos con los 5 iconos de marca
  * REALES incluidos como drawables dentro de la app (sin favicons
@@ -55,6 +55,17 @@ class PortalActivity : AppCompatActivity() {
             return
         }
         binding.tvTvInfo.text = "TV: $ip"
+
+        // v1.0.2: si se entró aunque la tele no respondió al chequeo
+        // de la puerta, el aviso queda visible en el portal.
+        val warning = CastSession.tvWarning
+            ?: intent.getStringExtra("tv_warning")
+        if (warning != null) {
+            binding.tvTvWarning.text = warning
+            binding.tvTvWarning.visibility = View.VISIBLE
+        } else {
+            binding.tvTvWarning.visibility = View.GONE
+        }
 
         // Accesos rápidos
         for ((name, iconRes, domain) in quickSites) {

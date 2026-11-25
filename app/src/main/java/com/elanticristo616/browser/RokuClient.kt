@@ -30,6 +30,10 @@ import java.nio.charset.StandardCharsets
 class RokuException(val code: Int = -1, val timedOut: Boolean = false, message: String = "") :
     Exception(message)
 
+/** Tiempo por intento del chequeo de conexión (10 s) y nº de intentos (3). */
+private const val CHECK_TIMEOUT_MS = 10_000
+private const val CHECK_ATTEMPTS = 3
+
 class RokuClient(val ip: String) {
 
     private val base = "http://$ip:8060"
@@ -131,9 +135,88 @@ class RokuClient(val ip: String) {
         parseApps(xml).firstOrNull()
     }
 
-    /** ¿La tele responde a ECP? */
-    suspend fun ping(): Boolean = withContext(Dispatchers.IO) {
-        get("$base/query/device-info") != null
+    /** ¿La tele responde a ECP? Acepta CUALQUIER respuesta HTTP del
+     *  puerto 8060 como «alcanzable»: incluso un error HTTP prueba
+     *  que algo escucha en ese puerto. Hasta 3 intentos, 10 s cada uno. */
+    suspend fun ping(): Boolean = checkReachable().reachable
+
+    /**
+     * Resultado del chequeo de conexión contra GET /query/device-info.
+     * reachable = el puerto 8060 respondió con algún código HTTP
+     * (200 o error: da igual, algo escucha ahí). Si no respondió,
+     * detalle() dice el motivo real en español.
+     */
+    data class CheckResult(
+        val reachable: Boolean,
+        val httpCode: Int?,
+        val timedOut: Boolean,
+        val refused: Boolean,
+        val deviceInfo: DeviceInfo?
+    ) {
+        /** Motivo real del fallo, en español, para mostrarlo tal cual. */
+        fun detalle(): String = when {
+            reachable && httpCode != null && httpCode !in 200..299 ->
+                "error HTTP $httpCode"
+            timedOut -> "sin respuesta (tiempo agotado)"
+            refused -> "conexión rechazada"
+            httpCode != null -> "error HTTP $httpCode"
+            else -> "sin conexión"
+        }
+    }
+
+    /** Chequeo robusto de la tele: GET /query/device-info con
+     *  timeout de 10 s y hasta 3 intentos. Acepta CUALQUIER código
+     *  HTTP como «tele alcanzable» (un 404/500 también prueba que
+     *  algo escucha en el puerto 8060); solo es inalcanzable si no
+     *  hay respuesta en ningún intento. No lanza excepciones. */
+    suspend fun checkReachable(): CheckResult = withContext(Dispatchers.IO) {
+        var lastTimedOut = false
+        var lastRefused = false
+        repeat(CHECK_ATTEMPTS) { attempt ->
+            try {
+                val (code, body) = probeDeviceInfo()
+                if (code != null) {
+                    val info = if (code == 200 && body != null) {
+                        try { parseDeviceInfo(body) } catch (e: Exception) { null }
+                    } else null
+                    return@withContext CheckResult(true, code, false, false, info)
+                }
+            } catch (e: java.net.SocketTimeoutException) {
+                lastTimedOut = true
+            } catch (e: java.net.ConnectException) {
+                lastRefused = true
+            } catch (e: java.io.IOException) {
+                if ((e.message ?: "").contains("refused", ignoreCase = true) ||
+                    (e.message ?: "").contains("ECONNREFUSED", ignoreCase = true)
+                ) lastRefused = true
+            } catch (e: Exception) {
+                // Se reintenta igual
+            }
+            if (attempt < CHECK_ATTEMPTS - 1) {
+                try { Thread.sleep(500) } catch (e: Exception) { }
+            }
+        }
+        CheckResult(false, null, lastTimedOut, lastRefused, null)
+    }
+
+    /** Un intento de GET /query/device-info: devuelve (código HTTP,
+     *  cuerpo solo si es 200). Lanza SocketTimeoutException si no
+     *  responde en 10 s, ConnectException si rechaza la conexión. */
+    private fun probeDeviceInfo(): Pair<Int?, String?> {
+        val conn = URL("$base/query/device-info").openConnection() as HttpURLConnection
+        try {
+            conn.requestMethod = "GET"
+            conn.connectTimeout = CHECK_TIMEOUT_MS
+            conn.readTimeout = CHECK_TIMEOUT_MS
+            conn.setRequestProperty("Connection", "close")
+            conn.connect()
+            val code = conn.responseCode
+            if (code != 200) return code to null
+            val text = BufferedReader(InputStreamReader(conn.inputStream, StandardCharsets.UTF_8)).readText()
+            return code to text
+        } finally {
+            try { conn.disconnect() } catch (e: Exception) { }
+        }
     }
 
     /** POST que devuelve el código HTTP real. Lanza RokuException sin conexión. */
@@ -192,8 +275,8 @@ class RokuClient(val ip: String) {
         val conn = URL(url).openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "GET"
-            conn.connectTimeout = 4000
-            conn.readTimeout = 5000
+            conn.connectTimeout = CHECK_TIMEOUT_MS
+            conn.readTimeout = CHECK_TIMEOUT_MS
             conn.connect()
             val code = conn.responseCode
             if (code != 200) return code to null
@@ -259,14 +342,25 @@ class RokuClient(val ip: String) {
             while (event != XmlPullParser.END_DOCUMENT) {
                 when (event) {
                     XmlPullParser.START_TAG -> tag = parser.name
+                    // BUG v1.0.1 (falso negativo): el texto en blanco
+                    // (saltos de línea e indentación) entre etiquetas
+                    // llegaba como evento TEXT con la etiqueta anterior
+                    // todavía puesta, y al asignarlo tal cual borraba
+                    // el nombre/modelo ya leídos, así que la función
+                    // siempre devolvía null aunque la tele respondiera
+                    // 200. Ahora solo se asigna texto NO en blanco y
+                    // la etiqueta se limpia al cerrarse.
                     XmlPullParser.TEXT -> {
                         val text = (parser.text ?: "").trim()
-                        when (tag) {
-                            "friendly-device-name" -> friendly = text
-                            "model-name" -> model = text
-                            "serial-number" -> serial = text
+                        if (text.isNotEmpty()) {
+                            when (tag) {
+                                "friendly-device-name" -> friendly = text
+                                "model-name" -> model = text
+                                "serial-number" -> serial = text
+                            }
                         }
                     }
+                    XmlPullParser.END_TAG -> tag = ""
                 }
                 event = parser.next()
             }

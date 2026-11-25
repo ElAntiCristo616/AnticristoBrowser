@@ -10,11 +10,15 @@ videos a la tele por el canal receptor «Web Video Caster - Receiver»
   buscador crudo y entrar a cualquier página. Sin ajustes salvo
   «Acerca de».
 - **Dos pantallas**: la puerta pide solo la IP de la tele para entrar
-  (la comprueba con GET a /query/device-info y la guarda; al abrir
-  la app vuelve a entrar sola si la tele responde), y el portal trae
-  el buscador DuckDuckGo y los accesos rápidos (YouTube, TikTok,
-  Instagram, X, Facebook) con iconos incluidos en la app. «Cambiar»
-  en el portal vuelve a la puerta para meter otra IP.
+  (la comprueba con GET a /query/device-info —timeout 10 s, hasta 3
+  intentos, cualquier código HTTP vale como «tele alcanzable»— y la
+  guarda; si la tele no responde, se entra IGUAL al portal con un
+  aviso visible y se reintenta al transmitir, v1.0.2: la puerta ya no
+  bloquea la entrada por un chequeo que falle; al abrir la app vuelve
+  a entrar sola con la IP guardada, con el mismo aviso si no responde),
+  y el portal trae el buscador DuckDuckGo y los accesos rápidos
+  (YouTube, TikTok, Instagram, X, Facebook) con iconos incluidos en
+  la app. «Cambiar» en el portal vuelve a la puerta para meter otra IP.
 - **Detección de video** en la página (por red y por DOM) y campo para
   pegar un enlace (YouTube, TikTok, X, Instagram, Facebook…) con yt-dlp.
 - **Selector de calidad**: antes de transmitir muestra las calidades

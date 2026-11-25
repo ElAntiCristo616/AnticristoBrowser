@@ -36,6 +36,22 @@ object CastHelper {
         fmt: String = "mp4",
         headers: Map<String, String>? = null
     ): CastResult = withContext(Dispatchers.IO) {
+        // v1.0.2: al transmitir se reintenta la conexión con la tele
+        // en ese momento (checkReachable: 10 s, hasta 3 intentos,
+        // cualquier HTTP vale). Si la tele ya responde, se sigue; si
+        // sigue sin responder, se dice el motivo real en español.
+        val check = try {
+            client.checkReachable()
+        } catch (e: Exception) {
+            null
+        }
+        if (check != null && !check.reachable) {
+            return@withContext CastResult(
+                false,
+                "La tele no respondió en esa IP (${check.detalle()}). " +
+                    "Revisa que esté prendida y en el mismo Wi-Fi."
+            )
+        }
         val server = try {
             CastSession.ensureServer()
         } catch (e: Exception) {

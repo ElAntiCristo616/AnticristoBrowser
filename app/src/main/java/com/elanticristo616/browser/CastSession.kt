@@ -15,6 +15,11 @@ object CastSession {
     /** Nombre de la tele conectada. */
     var rokuName: String? = null
 
+    /** Aviso visible en el portal cuando se entró aunque la tele no
+     *  respondió al chequeo (v1.0.2: la puerta ya no bloquea la
+     *  entrada). Null si la tele sí respondió. */
+    var tvWarning: String? = null
+
     /** Servidor HTTP local compartido (sirve archivos y recibe los
      *  reportes de estado del canal receptor). */
     var server: MediaServer? = null

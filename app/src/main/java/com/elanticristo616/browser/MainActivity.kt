@@ -10,22 +10,33 @@ import com.elanticristo616.browser.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
 /**
- * CuteNovna Browser v1.0.1 — PANTALLA 1: LA PUERTA.
+ * CuteNovna Browser v1.0.2 — PANTALLA 1: LA PUERTA.
  *
  * La IP de la tele es el requisito para entrar al portal: esta
  * pantalla es SOLO «Conectar a la tele», nada más. Sin buscador,
  * sin accesos rápidos, sin barra inferior y sin descubrimiento:
  * la conexión es solo por IP manual.
  *
- * Al pulsar «Conectar por IP» se valida la IPv4 y se comprueba que
- * la tele responde con GET http://<ip>:8060/query/device-info
- * (timeout 4 s, el que ya trae RokuClient.ping/queryDeviceInfo).
- * Si responde, la IP se guarda y se abre el portal; si no, error
- * en español y se queda en la puerta.
+ * Al pulsar «Conectar por IP» se valida la IPv4 y se comprueba la
+ * tele con RokuClient.checkReachable: GET
+ * http://<ip>:8060/query/device-info, timeout 10 s, hasta 3
+ * intentos, y CUALQUIER código HTTP cuenta como «tele alcanzable».
+ *
+ * v1.0.2 — LA PUERTA YA NO BLOQUEA: si el chequeo falla tras los
+ * reintentos, la IP se guarda IGUAL y se entra al portal con un
+ * aviso visible («La tele no respondió en esa IP, revisa que esté
+ * prendida. Podrás transmitir cuando responda»). La v1.0.1 dejaba
+ * fuera al usuario con un falso negativo: parseDeviceInfo borraba
+ * el nombre/modelo con el texto en blanco entre etiquetas del XML
+ * (ver RokuClient), así que queryDeviceInfo siempre devolvía null
+ * aunque la tele respondiera 200. La IP sigue siendo obligatoria
+ * para entrar; lo que cambia es que un chequeo que falle ya no
+ * deja al usuario fuera de su propia app. Al transmitir se
+ * reintenta la conexión en ese momento (CastHelper).
  *
  * Al abrir la app, si hay una IP guardada se intenta conectar
- * automáticamente con la misma comprobación; si la tele responde,
- * se entra directo al portal; si no, se muestra la puerta.
+ * automáticamente con la misma comprobación; si la tele responde
+ * se entra directo, y si no, se entra igual con el aviso.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -63,7 +74,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Valida la IP escrita y comprueba que la tele responde. */
+    /** Valida la IP escrita y comprueba la tele. */
     private fun conectarPorIp() {
         val ip = binding.etIpManual.text.toString().trim()
         if (!isValidIpv4(ip)) {
@@ -81,35 +92,51 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Comprueba la tele con GET http://<ip>:8060/query/device-info
-     * (RokuClient.queryDeviceInfo, timeout 4 s). Si responde, guarda
-     * la IP y abre el portal; si no, error en español en la puerta.
+     * Comprueba la tele (checkReachable: 10 s, hasta 3 intentos,
+     * cualquier HTTP vale) y SIEMPRE entra al portal: la IP se
+     * guarda igual aunque el chequeo falle, y en ese caso el portal
+     * muestra el aviso y al transmitir se reintenta la conexión.
+     * Solo una IP inválida (formato) impide entrar.
      */
     private fun conectar(ip: String) {
         binding.btnConectarIp.isEnabled = false
         lifecycleScope.launch {
             val client = RokuClient(ip)
-            val info = try {
-                client.queryDeviceInfo()
+            val check = try {
+                client.checkReachable()
             } catch (e: Exception) {
+                RokuClient.CheckResult(false, null, false, false, null)
+            }
+            val name = check.deviceInfo?.friendlyName?.ifBlank { null }
+                ?: prefs.getString("last_name", null)?.ifBlank { null }
+                ?: "Roku TV"
+            CastSession.rokuIp = ip
+            CastSession.rokuName = name
+            CastSession.tvWarning = if (check.reachable) {
                 null
-            }
-            if (info != null) {
-                val name = info.friendlyName.ifBlank { "Roku TV" }
-                CastSession.rokuIp = ip
-                CastSession.rokuName = name
-                prefs.edit()
-                    .putString("last_ip", ip)
-                    .putString("last_name", name)
-                    .apply()
-                startActivity(Intent(this@MainActivity, PortalActivity::class.java))
-                finish()
             } else {
-                binding.btnConectarIp.isEnabled = true
-                binding.tvStatusTele.text =
-                    "No responde ninguna Roku en esa IP. Revisa que la tele " +
-                        "esté prendida y la IP sea la correcta."
+                "La tele no respondió en esa IP, revisa que esté prendida. " +
+                    "Podrás transmitir cuando responda"
             }
+            prefs.edit()
+                .putString("last_ip", ip)
+                .putString("last_name", name)
+                .apply()
+            if (check.reachable) {
+                binding.tvStatusTele.text = "Conectado con $name ($ip)."
+            } else {
+                binding.tvStatusTele.text =
+                    "La tele no respondió en esa IP (${check.detalle()}). " +
+                        "Entrando al portal…"
+                Toast.makeText(
+                    this@MainActivity,
+                    "La tele no respondió en esa IP (${check.detalle()}). " +
+                        "Podrás transmitir cuando responda.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            startActivity(Intent(this@MainActivity, PortalActivity::class.java))
+            finish()
         }
     }
 }

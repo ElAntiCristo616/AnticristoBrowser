@@ -68,6 +68,20 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <!-- Aviso v1.0.2: se entró aunque la tele no respondió -->
+            <TextView
+                android:id="@+id/tvTvWarning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_red_pill"
+                android:gravity="center"
+                android:padding="10dp"
+                android:textColor="@color/snow_white"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp" />
+
             <!-- DuckDuckGo -->
             <LinearLayout
                 android:layout_width="match_parent"
