@@ -38,6 +38,9 @@ import kotlinx.coroutines.launch
  *   reabre, ✕ borra esa entrada, «Limpiar» borra todo.
  * - CERO accesos directos fijos (los 5 shortcuts se eliminaron).
  * - «Cambiar» vuelve a la puerta para vincular otra tele.
+ * - «Desconectar» (v1.1.2) suelta la tele vinculada sin salir
+ *   del lobby: para lo que suene, cierra la sesión y olvida la
+ *   tele; la tarjeta queda en «Sin tele».
  * - Sin temas ni personalización: un solo look fijo.
  *
  * La navegación DuckDuckGo sigue sin tema, como siempre.
@@ -110,6 +113,24 @@ class PortalActivity : AppCompatActivity() {
             finish()
         }
 
+        // v1.1.2: «Desconectar» en el lobby: para lo que suene,
+        // cierra la sesión y olvida la tele vinculada, SIN salir
+        // del lobby (a diferencia de «Cambiar», que va a la puerta).
+        // Vale para los 3 protocolos: en Roku no hay sesión Cast
+        // persistente, pero igual se para lo que suene y se olvida
+        // la tele (disconnectAll lo hace todo).
+        binding.btnDesconectarTv.setOnClickListener {
+            if (CastSession.activeTarget == null) return@setOnClickListener
+            lifecycleScope.launch {
+                val res = UniversalCast.disconnectAll(this@PortalActivity)
+                updateTvCard()
+                Toast.makeText(
+                    this@PortalActivity, res.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
         binding.btnAcercaDe.setOnClickListener {
             val t = CastSession.activeTarget
             val name = t?.name ?: "Sin tele"
@@ -168,8 +189,12 @@ class PortalActivity : AppCompatActivity() {
             // el nombre viejo de la tele anterior en la tarjeta.
             binding.tvTvNombre.text = "Sin tele"
             binding.tvTvDetalle.text = "Toca «Cambiar» para conectar una tele."
+            // v1.1.2: sin tele no hay nada que desconectar.
+            binding.btnDesconectarTv.visibility = View.GONE
             return
         }
+        // v1.1.2: con tele vinculada se muestra «Desconectar».
+        binding.btnDesconectarTv.visibility = View.VISIBLE
         binding.tvTvNombre.text = target.name
         binding.tvTvDetalle.text = when (target) {
             is RokuCastTarget -> "Roku • ${target.ip}"
