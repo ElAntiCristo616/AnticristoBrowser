@@ -113,10 +113,21 @@ class GoogleCastTarget(val route: GoogleCastManager.CastRoute) : CastTarget {
                 )
             }
         }
-        return ok(
-            GoogleCastManager.load(url, title, fmt),
-            "Mandando «${title.take(60)}» a «$name».",
-            "La tele Chromecast no respondió o no puede con ese video."
+        // v1.1.1: si la carga falla, sacar al receptor del modo
+        // Cast (stop + disconnect) para que no se quede en su
+        // pantalla idle con el ícono, como le pasó a la MundoGoTV.
+        val loaded = GoogleCastManager.load(url, title, fmt)
+        if (!loaded) {
+            try { GoogleCastManager.stop() } catch (e: Exception) { }
+            GoogleCastManager.disconnect()
+            return CastHelper.CastResult(
+                false,
+                "La tele Chromecast no respondió o no puede con ese video."
+            )
+        }
+        return CastHelper.CastResult(
+            true,
+            "Mandando «${title.take(60)}» a «$name»."
         )
     }
 
@@ -295,7 +306,22 @@ object DeviceDiscovery {
         val out = mutableListOf<CastTarget>()
         for (device in rokuDevices) out += RokuCastTarget(device.ip, device.name)
         for (route in castRoutes) out += GoogleCastTarget(route)
-        for (device in dlnaDevices) out += DlnaCastTarget(device)
+        // v1.1.1: deduplicar — una misma cajita (p. ej. una Android
+        // TV como la MundoGoTV) expone Cast y DLNA a la vez y salía
+        // dos veces en la hoja. Se prefiere Chromecast; un DLNA con
+        // la IP de una Roku o con el mismo nombre de un Cast es el
+        // mismo aparato y no se agrega. Tampoco se repite un DLNA
+        // por IP.
+        val castNames = castRoutes
+            .map { it.name.trim().lowercase() }.toSet()
+        val rokuIps = rokuDevices.map { it.ip }.toSet()
+        val seenDlnaIps = mutableSetOf<String>()
+        for (device in dlnaDevices) {
+            if (device.ip in rokuIps) continue
+            if (device.name.trim().lowercase() in castNames) continue
+            if (!seenDlnaIps.add(device.ip)) continue
+            out += DlnaCastTarget(device)
+        }
         // La Roku de la puerta siempre está aunque el SSDP no la vea.
         val gateIp = CastSession.rokuIp
         if (gateIp != null &&

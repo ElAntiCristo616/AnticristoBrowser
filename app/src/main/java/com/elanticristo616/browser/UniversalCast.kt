@@ -25,6 +25,43 @@ object UniversalCast {
 
     fun supportsSpeed(): Boolean = CastSession.activeTarget?.supportsSpeed() == true
 
+    /** Cierra la sesión Cast de la tele activa (si es Chromecast)
+     *  sin esperar al stop: para onDestroy y cambios de tele, donde
+     *  una corrutina no llegaría a tiempo antes de que la actividad
+     *  muera. v1.1.1: antes nadie llamaba a disconnect(), la sesión
+     *  quedaba viva y el receptor se quedaba en su pantalla idle
+     *  aunque se cerrara la app. */
+    fun disconnectCastNow() {
+        if (CastSession.activeTarget !is GoogleCastTarget) return
+        GoogleCastManager.disconnect()
+    }
+
+    /** Suelta la sesión Cast anterior si se vincula una tele
+     *  distinta (otro protocolo u otra ruta). Se llama ANTES de
+     *  reasignar CastSession.activeTarget. Si es la misma tele, no
+     *  se toca nada. */
+    fun releasePreviousCast(newTarget: CastTarget) {
+        val old = CastSession.activeTarget ?: return
+        if (old is GoogleCastTarget && old.id != newTarget.id) {
+            GoogleCastManager.disconnect()
+        }
+    }
+
+    /** Desconecta por completo de la tele activa: para la
+     *  reproducción, cierra la sesión Cast si la hay y olvida la
+     *  tele vinculada (CastSession + TargetStore). Lo usa el botón
+     *  «Desconectar» del reproductor. */
+    suspend fun disconnectAll(context: Context): CastHelper.CastResult {
+        val target = CastSession.activeTarget
+        if (target != null) {
+            try { target.command("stop") } catch (e: Exception) { }
+        }
+        if (target is GoogleCastTarget) GoogleCastManager.disconnect()
+        CastSession.activeTarget = null
+        TargetStore.clear(context)
+        return CastHelper.CastResult(true, "Desconectado de la tele.")
+    }
+
     suspend fun castVideo(
         context: Context,
         url: String,

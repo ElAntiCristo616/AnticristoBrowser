@@ -98,8 +98,11 @@ class PortalActivity : AppCompatActivity() {
         }
         refreshHistory()
 
-        // Cambiar de tele: vuelve a la puerta (IP o buscar teles).
+        // Cambiar de tele: suelta la sesión Cast si la hay
+        // (v1.1.1) y vuelve a la puerta (IP o buscar teles).
         binding.btnCambiarTv.setOnClickListener {
+            UniversalCast.disconnectCastNow()
+            CastSession.activeTarget = null
             startActivity(
                 Intent(this, MainActivity::class.java)
                     .putExtra("change_tv", true)
@@ -148,12 +151,25 @@ class PortalActivity : AppCompatActivity() {
         super.onDestroy()
         // Al salir del lobby se apaga el servidor local y se olvida
         // el receptor (no hay transmisión activa desde el lobby).
-        if (isFinishing) CastSession.reset()
+        // v1.1.1: además se cierra la sesión Cast para que el
+        // receptor salga del modo Cast; antes la sesión quedaba viva
+        // y la tele se quedaba en su pantalla idle.
+        if (isFinishing) {
+            UniversalCast.disconnectCastNow()
+            CastSession.reset()
+        }
     }
 
     /** Tarjeta «TV vinculada: <nombre> • <protocolo/IP>». */
     private fun updateTvCard() {
-        val target = CastSession.activeTarget ?: return
+        val target = CastSession.activeTarget
+        if (target == null) {
+            // v1.1.1: sin tele (p. ej. tras «Desconectar»), no dejar
+            // el nombre viejo de la tele anterior en la tarjeta.
+            binding.tvTvNombre.text = "Sin tele"
+            binding.tvTvDetalle.text = "Toca «Cambiar» para conectar una tele."
+            return
+        }
         binding.tvTvNombre.text = target.name
         binding.tvTvDetalle.text = when (target) {
             is RokuCastTarget -> "Roku • ${target.ip}"

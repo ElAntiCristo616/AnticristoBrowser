@@ -130,6 +130,9 @@ class MainActivity : AppCompatActivity() {
     /** Vincula una tele: queda como activa, se guarda y se entra
      *  al portal. Para Roku también se guarda la IP. */
     private fun vincular(target: CastTarget, entrar: Boolean) {
+        // v1.1.1: si la tele vinculada era un Chromecast y se
+        // vincula otra distinta, soltar su sesión antes de cambiar.
+        UniversalCast.releasePreviousCast(target)
         CastSession.activeTarget = target
         TargetStore.save(this, target)
         if (target is RokuCastTarget) {
@@ -212,6 +215,9 @@ class MainActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG
                 ).show()
             }
+            // v1.1.1: si la tele vinculada era un Chromecast,
+            // soltar su sesión antes de cambiar a esta Roku.
+            UniversalCast.releasePreviousCast(RokuCastTarget(ip, name))
             CastSession.activeTarget = RokuCastTarget(ip, name)
             TargetStore.save(this@MainActivity, CastSession.activeTarget!!)
             startActivity(Intent(this@MainActivity, PortalActivity::class.java))

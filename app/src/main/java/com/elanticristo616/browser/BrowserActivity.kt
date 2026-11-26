@@ -211,6 +211,7 @@ class BrowserActivity : AppCompatActivity() {
         }
         binding.btnNavMenu.setOnClickListener { mostrarMenu() }
         binding.btnCastParar.setOnClickListener { comandoReceptor("stop") }
+        binding.btnCastDesconectar.setOnClickListener { desconectarTele() }
         binding.btnPlayerPlay.setOnClickListener { togglePlayPause() }
         binding.btnSeekBack.setOnClickListener { saltar(-10) }
         binding.btnSeekFwd.setOnClickListener { saltar(10) }
@@ -295,6 +296,12 @@ class BrowserActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         detenerSondeoPosicion()
+        // v1.1.1: si se cierra el navegador sin transmisión activa,
+        // soltar la sesión Cast para que el receptor salga del modo
+        // Cast. Con transmisión activa NO se toca: la tele sigue
+        // reproduciendo aunque se salga del navegador (al salir de
+        // la app por completo lo cierra el onDestroy del portal).
+        if (isFinishing && !castActive) UniversalCast.disconnectCastNow()
         super.onDestroy()
     }
 
@@ -1200,6 +1207,27 @@ class BrowserActivity : AppCompatActivity() {
         }
     }
 
+    /** v1.1.1: «Desconectar» — para la reproducción, cierra la
+     *  sesión Cast si la hay y olvida la tele vinculada, para que
+     *  el receptor salga del modo Cast y no se quede en su pantalla
+     *  idle. */
+    private fun desconectarTele() {
+        lifecycleScope.launch {
+            UniversalCast.disconnectAll(this@BrowserActivity)
+            castActive = false
+            isPlayingNow = false
+            detenerSondeoPosicion()
+            playerDialog?.dismiss()
+            binding.castBar.visibility = View.GONE
+            binding.dotConexion.visibility = View.GONE
+            binding.tvNavTv.text = "Sin tele"
+            Toast.makeText(
+                this@BrowserActivity, "Desconectado de la tele.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     /** Salto de ±10 s en lo que se transmite (cualquier protocolo). */
     private fun saltar(deltaSegundos: Int) {
         lifecycleScope.launch {
@@ -1388,6 +1416,9 @@ class BrowserActivity : AppCompatActivity() {
             DestinationPicker.show(
                 this@BrowserActivity, targets,
                 onPick = { target ->
+                    // v1.1.1: soltar la sesión Cast anterior si se
+                    // cambia a otra tele distinta.
+                    UniversalCast.releasePreviousCast(target)
                     CastSession.activeTarget = target
                     TargetStore.save(this@BrowserActivity, target)
                     if (target is RokuCastTarget) {
