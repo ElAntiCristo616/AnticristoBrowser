@@ -35,9 +35,16 @@ object YtDlpExtractor {
         val height: Int
     )
 
-    /** Una calidad disponible para elegir. */
+    /** Una calidad disponible para elegir.
+     *  Altura 0 = solo audio SOLO si el formato es de audio (mp3/m4a);
+     *  un video directo sin altura conocida se etiqueta "Video", nunca
+     *  "Audio" (ese era el bug que se veía en xHamster). */
     data class QualityOption(val height: Int, val url: String, val fmt: String) {
-        val label: String get() = if (height > 0) "${height}p" else "Audio"
+        val label: String get() = when {
+            height > 0 -> "${height}p"
+            fmt == "mp3" || fmt == "m4a" -> "Solo audio"
+            else -> "Video"
+        }
     }
 
     /** Título + calidades disponibles, de mayor a menor. */
@@ -191,7 +198,7 @@ object YtDlpExtractor {
             if (audio != null) {
                 out += QualityOption(
                     0, audio.url!!,
-                    if (audio.ext == "mp3") "mp3" else "mp4"
+                    if (audio.ext == "mp3") "mp3" else "m4a"
                 )
             }
         }

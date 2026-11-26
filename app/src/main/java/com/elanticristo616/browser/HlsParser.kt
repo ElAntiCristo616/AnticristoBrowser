@@ -13,9 +13,20 @@ object HlsParser {
 
     data class Variant(val height: Int, val url: String, val bandwidth: Long = 0)
 
-    /** Variantes del manifiesto maestro, ordenadas de mayor a menor altura. */
-    fun parseVariants(masterUrl: String): List<Variant> {
-        val text = fetch(masterUrl) ?: return emptyList()
+    /** Variantes del manifiesto maestro, ordenadas de mayor a menor altura.
+     *  referer: URL de la página (muchos CDN lo exigen); cookie: cookies
+     *  del WebView para ese dominio (algunos manifiestos piden sesión).
+     *  Si el manifiesto es una LISTA DE MEDIOS (sin #EXT-X-STREAM-INF
+     *  pero con #EXTINF), se infiere la altura de la propia URL
+     *  (p. ej. multi=740x480 → 480p): así nunca cae a una sola opción
+     *  sin altura, que antes se etiquetaba mal como "Audio". */
+    fun parseVariants(
+        masterUrl: String,
+        referer: String? = null,
+        cookie: String? = null
+    ): List<Variant> {
+        val text = fetch(masterUrl, referer, cookie) ?: return emptyList()
+        if (!text.contains("#EXTM3U")) return emptyList()
         val out = mutableListOf<Variant>()
         val lines = text.lines()
         var i = 0
@@ -37,13 +48,27 @@ object HlsParser {
             }
             i++
         }
-        // Una variante por altura (la de más bitrate si se repite)
-        return out.groupBy { it.height }
-            .map { (_, v) -> v.maxByOrNull { it.bandwidth }!! }
-            .sortedByDescending { it.height }
+        if (out.isNotEmpty()) {
+            // Una variante por altura (la de más bitrate si se repite)
+            return out.groupBy { it.height }
+                .map { (_, v) -> v.maxByOrNull { it.bandwidth }!! }
+                .sortedByDescending { it.height }
+        }
+        // Lista de medios: un solo flujo; la altura sale de la URL.
+        if (text.contains("#EXTINF")) {
+            val height = inferHeightFromUrl(masterUrl)
+            if (height > 0) return listOf(Variant(height, masterUrl))
+        }
+        return emptyList()
     }
 
-    private fun fetch(url: String): String? {
+    /** Altura (p. ej. 480) sacada de la URL: multi=740x480, 1280x720… */
+    fun inferHeightFromUrl(url: String): Int {
+        val m = Regex("""(\d{3,4})x(\d{3,4})""").find(url) ?: return 0
+        return m.groupValues[2].toIntOrNull() ?: 0
+    }
+
+    private fun fetch(url: String, referer: String?, cookie: String?): String? {
         return try {
             val conn = URL(url).openConnection() as HttpURLConnection
             conn.connectTimeout = 8000
@@ -52,6 +77,12 @@ object HlsParser {
                 "User-Agent",
                 "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36"
             )
+            if (!referer.isNullOrBlank()) {
+                conn.setRequestProperty("Referer", referer)
+            }
+            if (!cookie.isNullOrBlank()) {
+                conn.setRequestProperty("Cookie", cookie)
+            }
             try {
                 if (conn.responseCode != 200) return null
                 conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
