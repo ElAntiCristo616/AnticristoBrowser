@@ -2,6 +2,7 @@ package com.elanticristo616.browser
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -15,7 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.elanticristo616.browser.databinding.ActivityPortalBinding
 
 /**
- * CuteNovna Browser v1.0.2 — PANTALLA 2: EL PORTAL.
+ * CuteNovna Browser v1.0.4 — PANTALLA 2: EL PORTAL.
  *
  * Solo se entra aquí después de poner la IP de la tele en la puerta
  * (MainActivity). Lobby de DuckDuckGo: buscador en píldora blanca
@@ -25,18 +26,24 @@ import com.elanticristo616.browser.databinding.ActivityPortalBinding
  *
  * Los accesos rápidos abren el sitio en el navegador (WebView);
  * para la tele solo se usa el canal receptor WVC 259656, nada más.
+ * TikTok entra por www.tiktok.com (con el user-agent de Chrome
+ * móvil real del navegador, la web carga y se navega).
  *
  * «TV: <ip> · Cambiar» vuelve a la puerta para meter otra IP; la
  * IP guardada se reemplaza al conectar con la nueva.
+ *
+ * Temas (v1.0.4): paleta + partículas del tema guardado; el botón
+ * «Tema» abre el selector con los 13 temas.
  */
 class PortalActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPortalBinding
+    private lateinit var theme: ThemeManager.BrowserTheme
 
     /** Nombre, icono (drawable de la app) y dominio de cada acceso rápido. */
     private val quickSites = listOf(
         Triple("YouTube", R.drawable.ic_brand_youtube, "youtube.com"),
-        Triple("TikTok", R.drawable.ic_brand_tiktok, "tiktok.com"),
+        Triple("TikTok", R.drawable.ic_brand_tiktok, "www.tiktok.com"),
         Triple("Instagram", R.drawable.ic_brand_instagram, "instagram.com"),
         Triple("X", R.drawable.ic_brand_x, "x.com"),
         Triple("Facebook", R.drawable.ic_brand_facebook, "facebook.com")
@@ -46,6 +53,8 @@ class PortalActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPortalBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        theme = ThemeManager.current(this)
+        aplicarTema()
 
         // Sin tele conectada no hay portal: de vuelta a la puerta.
         val ip = CastSession.rokuIp
@@ -76,6 +85,11 @@ class PortalActivity : AppCompatActivity() {
         binding.btnBuscarWeb.setOnClickListener { buscar(binding.etBuscar.text.toString()) }
         binding.etBuscar.setOnEditorActionListener { _, _, _ ->
             buscar(binding.etBuscar.text.toString()); true
+        }
+
+        // Selector de temas
+        binding.btnTema.setOnClickListener {
+            ThemeManager.showPicker(this)
         }
 
         // Cambiar de tele: vuelve a la puerta con la IP ya escrita.
@@ -121,6 +135,34 @@ class PortalActivity : AppCompatActivity() {
         }
     }
 
+    /** Paleta + partículas del tema guardado en todo el portal. */
+    private fun aplicarTema() {
+        val density = resources.displayMetrics.density
+        binding.root.background = ThemeManager.gradient(theme)
+        binding.particleView.setTheme(theme.particles, theme.particleColor)
+        binding.garlandView.visibility =
+            if (theme.garland) View.VISIBLE else View.GONE
+        binding.tvTitulo.setTextColor(theme.text)
+        binding.tvSubtitulo.setTextColor(theme.muted)
+        binding.tvTvInfo.setTextColor(theme.muted)
+        binding.tvCambiar.setTextColor(theme.accent)
+        binding.tvDuck.setTextColor(theme.text)
+        binding.tvAccesos.setTextColor(theme.text)
+        binding.btnBuscarWeb.backgroundTintList =
+            ColorStateList.valueOf(theme.accent)
+        binding.btnTema.text = "Tema: ${theme.name}"
+        binding.btnTema.backgroundTintList =
+            ColorStateList.valueOf(theme.surfaceLight)
+        binding.btnTema.setTextColor(theme.text)
+        binding.btnAcercaDe.backgroundTintList =
+            ColorStateList.valueOf(theme.surfaceLight)
+        binding.btnAcercaDe.setTextColor(theme.text)
+        binding.navBar.background = ThemeManager.roundedSurface(theme, 18f, density)
+        binding.tvNavInicio.setTextColor(theme.text)
+        binding.tvNavBuscar.setTextColor(theme.muted)
+        binding.tvNavCast.setTextColor(theme.accent)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         // Al salir del portal se apaga el servidor local y se olvida
@@ -161,7 +203,7 @@ class PortalActivity : AppCompatActivity() {
         }
         val label = TextView(this).apply {
             text = name
-            setTextColor(0xFFFFFFFF.toInt())
+            setTextColor(theme.text)
             textSize = 13f
             gravity = Gravity.CENTER
         }

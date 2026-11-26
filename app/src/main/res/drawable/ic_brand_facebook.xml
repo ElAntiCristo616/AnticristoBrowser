@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Facebook oficial: f blanca sobre azul (#1877F2). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="72dp"
     android:height="72dp"
@@ -9,5 +10,5 @@
         android:pathData="M48,0a48,48 0 1,0 0,96 48,48 0 1,0 0,-96z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M62,26h-8c-7,0 -12,5 -12,12v5h-7v9h7v18h10V52h8l1,-9h-9v-4.5c0,-2.5 1.5,-4 4,-4H62z" />
+        android:pathData="M62,22h-7c-8,0 -14,6 -14,14v6h-8v10h8v22h11V52h8l1.5,-10h-9.5v-5c0,-2.5 1.5,-4 4,-4H62z" />
 </vector>

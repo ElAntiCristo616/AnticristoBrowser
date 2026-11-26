@@ -2,7 +2,9 @@ package com.elanticristo616.browser
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -41,6 +43,7 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var theme: ThemeManager.BrowserTheme
 
     private val prefs by lazy { getSharedPreferences("roku", Context.MODE_PRIVATE) }
 
@@ -48,6 +51,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        theme = ThemeManager.current(this)
+        aplicarTema()
 
         binding.btnConectarIp.setOnClickListener { conectarPorIp() }
         binding.etIpManual.setOnEditorActionListener { _, _, _ ->
@@ -72,6 +77,26 @@ class MainActivity : AppCompatActivity() {
             binding.tvStatusTele.text = "Conectando con $savedIp…"
             conectar(savedIp)
         }
+    }
+
+    /** Paleta + partículas del tema guardado en la puerta. */
+    private fun aplicarTema() {
+        val density = resources.displayMetrics.density
+        binding.root.background = ThemeManager.gradient(theme)
+        binding.particleView.setTheme(theme.particles, theme.particleColor)
+        binding.garlandView.visibility =
+            if (theme.garland) View.VISIBLE else View.GONE
+        binding.tvTitulo.setTextColor(theme.text)
+        binding.tvSubtitulo.setTextColor(theme.muted)
+        binding.tvConectar.setTextColor(theme.text)
+        binding.tvStatusTele.setTextColor(theme.text)
+        binding.tvAyudaIp.setTextColor(theme.text)
+        binding.tvAyudaCanal.setTextColor(theme.text)
+        binding.cardConectar.background =
+            ThemeManager.roundedSurface(theme, 8f, density)
+        binding.btnConectarIp.backgroundTintList =
+            ColorStateList.valueOf(theme.accent)
+        binding.btnConectarIp.setTextColor(0xFFFFFFFF.toInt())
     }
 
     /** Valida la IP escrita y comprueba la tele. */

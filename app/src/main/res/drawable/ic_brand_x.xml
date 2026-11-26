@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- X oficial: X blanca y gruesa sobre negro. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="72dp"
     android:height="72dp"
     android:viewportWidth="96"
     android:viewportHeight="96">
     <path
-        android:fillColor="#0F1419"
+        android:fillColor="#000000"
         android:pathData="M48,0a48,48 0 1,0 0,96 48,48 0 1,0 0,-96z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="6.5"
-        android:strokeLineCap="butt"
-        android:pathData="M33,33 L63,63 M63,33 L33,63" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,26 L42,26 L64,70 L54,70 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M64,26 L54,26 L32,70 L42,70 Z" />
 </vector>

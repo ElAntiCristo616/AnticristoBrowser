@@ -15,10 +15,12 @@
             android:padding="16dp">
 
             <com.elanticristo616.browser.GarlandView
+                android:id="@+id/garlandView"
                 android:layout_width="match_parent"
                 android:layout_height="56dp" />
 
             <TextView
+                android:id="@+id/tvTitulo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
@@ -29,6 +31,7 @@
                 android:layout_marginTop="8dp" />
 
             <TextView
+                android:id="@+id/tvSubtitulo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
@@ -51,6 +54,7 @@
                     android:src="@drawable/ic_tv" />
 
                 <TextView
+                    android:id="@+id/tvConectar"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
@@ -61,6 +65,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/cardConectar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -121,6 +126,7 @@
                 </LinearLayout>
 
                 <TextView
+                    android:id="@+id/tvAyudaIp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -129,6 +135,7 @@
                     android:textSize="13sp" />
 
                 <TextView
+                    android:id="@+id/tvAyudaCanal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -139,7 +146,8 @@
         </LinearLayout>
     </ScrollView>
 
-    <com.elanticristo616.browser.SnowView
+    <com.elanticristo616.browser.ParticleView
+        android:id="@+id/particleView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="false"

@@ -118,7 +118,10 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Barrita de control mientras se transmite (oculta si no) -->
+        <!-- Barrita de control mientras se transmite (oculta si no).
+             Fila 1: estado + Pausa / Seguir / Parar.
+             Fila 2 (v1.0.4): saltos -10 s / +10 s y barra de progreso
+             con el tiempo (la posición la reporta el canal). -->
         <LinearLayout
             android:id="@+id/castBar"
             android:layout_width="match_parent"
@@ -127,55 +130,107 @@
             android:layout_marginEnd="12dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_bottom_bar"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:paddingStart="14dp"
             android:paddingTop="8dp"
             android:paddingEnd="8dp"
             android:paddingBottom="8dp"
             android:visibility="gone">
 
-            <TextView
-                android:id="@+id/tvCastBarStatus"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Transmitiendo…"
-                android:textColor="@color/sage"
-                android:textSize="13sp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/btnCastPausa"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:backgroundTint="@color/pine_light"
-                android:text="Pausa"
-                android:textColor="@color/snow_white"
-                android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tvCastBarStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Transmitiendo…"
+                    android:textColor="@color/sage"
+                    android:textSize="13sp" />
 
-            <Button
-                android:id="@+id/btnCastSeguir"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:layout_marginStart="6dp"
-                android:backgroundTint="@color/pine_light"
-                android:text="Seguir"
-                android:textColor="@color/snow_white"
-                android:textSize="12sp" />
+                <Button
+                    android:id="@+id/btnCastPausa"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:backgroundTint="@color/pine_light"
+                    android:text="Pausa"
+                    android:textColor="@color/snow_white"
+                    android:textSize="12sp" />
 
-            <Button
-                android:id="@+id/btnCastParar"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:layout_marginStart="6dp"
-                android:backgroundTint="@color/pine_light"
-                android:text="Parar"
-                android:textColor="@color/snow_white"
-                android:textSize="12sp" />
+                <Button
+                    android:id="@+id/btnCastSeguir"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="6dp"
+                    android:backgroundTint="@color/pine_light"
+                    android:text="Seguir"
+                    android:textColor="@color/snow_white"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnCastParar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="6dp"
+                    android:backgroundTint="@color/pine_light"
+                    android:text="Parar"
+                    android:textColor="@color/snow_white"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnSeekBack"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:backgroundTint="@color/pine_light"
+                    android:text="−10 s"
+                    android:textColor="@color/snow_white"
+                    android:textSize="12sp" />
+
+                <SeekBar
+                    android:id="@+id/seekCast"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:max="0"
+                    android:progress="0" />
+
+                <TextView
+                    android:id="@+id/tvCastTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0:00 / 0:00"
+                    android:textColor="@color/sage"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnSeekFwd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="8dp"
+                    android:backgroundTint="@color/pine_light"
+                    android:text="+10 s"
+                    android:textColor="@color/snow_white"
+                    android:textSize="12sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Barra inferior delgada: atrás, adelante, transmitir, menú -->
         <LinearLayout
+            android:id="@+id/navBar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:background="@color/pine_dark"
@@ -224,6 +279,7 @@
                         android:tint="@color/snow_white" />
 
                     <TextView
+                        android:id="@+id/tvNavTv"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="TV"
@@ -255,7 +311,8 @@
         </LinearLayout>
     </LinearLayout>
 
-    <com.elanticristo616.browser.SnowView
+    <com.elanticristo616.browser.ParticleView
+        android:id="@+id/particleView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="false"

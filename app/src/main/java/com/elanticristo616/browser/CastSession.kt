@@ -35,6 +35,15 @@ object CastSession {
     @Volatile
     var receiverState: String? = null
 
+    /** Última posición (s) y duración (s) que reportó el canal con
+     *  sus eventos «position» (v1.0.4: la barra de progreso y los
+     *  saltos de ±10 s se calculan desde aquí). -1 = sin dato. */
+    @Volatile
+    var receiverPosition: Double = -1.0
+
+    @Volatile
+    var receiverDuration: Double = -1.0
+
     /** Último deviceInfo que reportó el canal (llega al saludarlo con
      *  deviceConnect). Sirve para saber que el canal reconoció al
      *  teléfono: sin este saludo el canal muestra su aviso de
@@ -87,5 +96,7 @@ object CastSession {
         receiver = null
         receiverState = null
         receiverDeviceInfo = null
+        receiverPosition = -1.0
+        receiverDuration = -1.0
     }
 }

@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- TikTok oficial: nota musical sobre negro, con el efecto de
+     colores cian (#25F4EE) y magenta (#FE2C55) desplazados a los
+     lados, como el logo real. Nota gruesa y centrada. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="72dp"
     android:height="72dp"
@@ -7,37 +10,37 @@
     <path
         android:fillColor="#000000"
         android:pathData="M48,0a48,48 0 1,0 0,96 48,48 0 1,0 0,-96z" />
-    <group android:translateX="-2.5" android:translateY="-1">
+    <group android:translateX="-2">
         <path
             android:fillColor="#00000000"
             android:strokeColor="#25F4EE"
-            android:strokeWidth="5.5"
+            android:strokeWidth="8"
             android:strokeLineCap="round"
-            android:pathData="M54,26 V64 M54,26 C66,27 70,35 68,45" />
+            android:pathData="M60,26 V60 M60,26 C72,27 76,36 74,46" />
         <path
             android:fillColor="#25F4EE"
-            android:pathData="M45,57a9,8 0 1,0 0.1,0z" />
+            android:pathData="M50,52a10,10 0 1,0 0.1,0z" />
     </group>
-    <group android:translateX="2.5" android:translateY="1">
+    <group android:translateX="2">
         <path
             android:fillColor="#00000000"
             android:strokeColor="#FE2C55"
-            android:strokeWidth="5.5"
+            android:strokeWidth="8"
             android:strokeLineCap="round"
-            android:pathData="M54,26 V64 M54,26 C66,27 70,35 68,45" />
+            android:pathData="M60,26 V60 M60,26 C72,27 76,36 74,46" />
         <path
             android:fillColor="#FE2C55"
-            android:pathData="M45,57a9,8 0 1,0 0.1,0z" />
+            android:pathData="M50,52a10,10 0 1,0 0.1,0z" />
     </group>
     <group>
         <path
             android:fillColor="#00000000"
             android:strokeColor="#FFFFFF"
-            android:strokeWidth="5.5"
+            android:strokeWidth="8"
             android:strokeLineCap="round"
-            android:pathData="M54,26 V64 M54,26 C66,27 70,35 68,45" />
+            android:pathData="M60,26 V60 M60,26 C72,27 76,36 74,46" />
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M45,57a9,8 0 1,0 0.1,0z" />
+            android:pathData="M50,52a10,10 0 1,0 0.1,0z" />
     </group>
 </vector>

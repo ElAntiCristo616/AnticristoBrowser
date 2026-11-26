@@ -39,6 +39,36 @@ videos a la tele por el canal receptor «Web Video Caster - Receiver»
 - **Conectar a la tele**: descubrimiento por SSDP o IP manual
   (la IP se ve en la tele en Ajustes → Red → Acerca de); la IP se
   guarda y se usa primero la próxima vez.
+- **Controles del reproductor al transmitir (v1.0.4)**: la barrita de
+  transmisión trae Pausa / Seguir / Parar, saltos de −10 s y +10 s y
+  barra de progreso con el tiempo. Los saltos usan el protocolo del
+  canal receptor (positionSet, exacto) con respaldo por teclas ECP
+  Fwd/Rew; la posición llega por los eventos del canal y se sondea
+  cada 5 s. Solo se puede probar en la tele real.
+- **Detección de video agrupada (v1.0.4)**: cada video es UNA tarjeta
+  en la hoja (sus variantes hls.m3u8, hls-360p, hls-480p, hls-720p y
+  mp4 se fusionan), con miniatura del póster, duración y sus calidades
+  dentro. El video principal (el reproductor más grande/visible) va
+  primero con insignia dorada «Video principal». La tarjeta elegida
+  queda marcada con borde dorado y ✓, y la calidad elegida con radio
+  lleno y fondo resaltado. Filtro de anuncios reforzado (más
+  marcadores de URL, contenedores de anuncios, videos ocultos y
+  videos de menos de 10 s fuera).
+- **Iconos de marca rehechos (v1.0.4)**: los 5 accesos rápidos con los
+  logos oficiales vectoriales (YouTube: play blanco sobre rojo;
+  TikTok: nota con cian/magenta sobre negro; Instagram: cámara sobre
+  el degradado oficial; X: X blanca sobre negro; Facebook: f blanca
+  sobre azul).
+- **TikTok arreglado (v1.0.4)**: user-agent de Chrome móvil real (sin
+  «wv»), cookies de terceros aceptadas, entrada por www.tiktok.com y
+  manejo de enlaces tiktok:// o intent://.
+- **Temas (v1.0.4)**: 13 temas (Navidad, Sakura, Invierno, Océano,
+  Galaxia, Bosque, Fuego, Atardecer, Neón, Otoño, Dulce, Lluvia y
+  Claro) con paleta completa y partículas propias por tema (nieve,
+  pétalos rosa, hojas, burbujas, brasas, lluvia, estrellas,
+  corazones, destellos, polvo dorado o ninguna), guardados y
+  aplicables al portal, a la puerta y al navegador. Selector en el
+  botón «Tema» del portal y en el menú ⋮ del navegador.
 - Tema navideño (verde pino, rojo, guirnalda y nieve), todo en español.
 
 ## Para transmitir necesitas

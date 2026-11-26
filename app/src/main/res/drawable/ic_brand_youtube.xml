@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- YouTube oficial: play blanco sobre rojo. Círculo blanco de fondo,
+     botón rojo con esquinas redondeadas y triángulo blanco centrado. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="72dp"
     android:height="72dp"
@@ -9,8 +11,8 @@
         android:pathData="M48,0a48,48 0 1,0 0,96 48,48 0 1,0 0,-96z" />
     <path
         android:fillColor="#FF0000"
-        android:pathData="M24,36h48a8,8 0 0,1 8,8v8a8,8 0 0,1 -8,8H24a8,8 0 0,1 -8,-8v-8a8,8 0 0,1 8,-8z" />
+        android:pathData="M30,32h36a12,12 0 0,1 12,12v8a12,12 0 0,1 -12,12H30a12,12 0 0,1 -12,-12v-8a12,12 0 0,1 12,-12z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M42,40 L62,48 L42,56 Z" />
+        android:pathData="M41,40 L41,56 L61,48 Z" />
 </vector>

@@ -17,10 +17,12 @@
             android:paddingBottom="110dp">
 
             <com.elanticristo616.browser.GarlandView
+                android:id="@+id/garlandView"
                 android:layout_width="match_parent"
                 android:layout_height="56dp" />
 
             <TextView
+                android:id="@+id/tvTitulo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
@@ -31,6 +33,7 @@
                 android:layout_marginTop="8dp" />
 
             <TextView
+                android:id="@+id/tvSubtitulo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
@@ -95,6 +98,7 @@
                     android:src="@drawable/ic_duck" />
 
                 <TextView
+                    android:id="@+id/tvDuck"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
@@ -141,6 +145,7 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/tvAccesos"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Accesos rápidos"
@@ -158,6 +163,15 @@
                 android:weightSum="5" />
 
             <Button
+                android:id="@+id/btnTema"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:backgroundTint="@color/pine_light"
+                android:text="Tema: Navidad"
+                android:textColor="@color/snow_white" />
+
+            <Button
                 android:id="@+id/btnAcercaDe"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -169,7 +183,8 @@
         </LinearLayout>
     </ScrollView>
 
-    <com.elanticristo616.browser.SnowView
+    <com.elanticristo616.browser.ParticleView
+        android:id="@+id/particleView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="false"
@@ -177,6 +192,7 @@
 
     <!-- Barra inferior: Inicio / Buscar / Cast -->
     <LinearLayout
+        android:id="@+id/navBar"
         android:layout_width="match_parent"
         android:layout_height="72dp"
         android:layout_gravity="bottom"
@@ -201,6 +217,7 @@
                 android:src="@drawable/ic_home" />
 
             <TextView
+                android:id="@+id/tvNavInicio"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Inicio"
@@ -222,6 +239,7 @@
                 android:src="@drawable/ic_search" />
 
             <TextView
+                android:id="@+id/tvNavBuscar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Buscar"
@@ -245,6 +263,7 @@
                 android:src="@drawable/ic_cast" />
 
             <TextView
+                android:id="@+id/tvNavCast"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Cast"

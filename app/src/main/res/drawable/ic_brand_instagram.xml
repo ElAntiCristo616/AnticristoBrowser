@@ -1,35 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Instagram oficial: cámara blanca sobre el degradado oficial
+     (amarillo → naranja → rosa → morado → azul), en cuadrado
+     redondeado como el icono de la app. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="72dp"
     android:height="72dp"
     android:viewportWidth="96"
     android:viewportHeight="96">
-    <path android:pathData="M48,0a48,48 0 1,0 0,96 48,48 0 1,0 0,-96z">
+    <path android:pathData="M38,16h20a22,22 0 0,1 22,22v20a22,22 0 0,1 -22,22H38a22,22 0 0,1 -22,-22V38a22,22 0 0,1 22,-22z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
-                android:startX="12"
-                android:startY="12"
-                android:endX="84"
-                android:endY="84">
-                <item android:offset="0" android:color="#833AB4" />
-                <item android:offset="0.5" android:color="#E1306C" />
-                <item android:offset="1" android:color="#F77737" />
+                android:startX="16"
+                android:startY="80"
+                android:endX="80"
+                android:endY="16">
+                <item android:offset="0" android:color="#FEDA75" />
+                <item android:offset="0.25" android:color="#FA7E1E" />
+                <item android:offset="0.5" android:color="#D62976" />
+                <item android:offset="0.75" android:color="#962FBF" />
+                <item android:offset="1" android:color="#4F5BD5" />
             </gradient>
         </aapt:attr>
     </path>
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="4.5"
-        android:pathData="M40,28h16a12,12 0 0,1 12,12v16a12,12 0 0,1 -12,12H40a12,12 0 0,1 -12,-12V40a12,12 0 0,1 12,-12z" />
+        android:strokeWidth="5"
+        android:pathData="M43,32h10a11,11 0 0,1 11,11v10a11,11 0 0,1 -11,11H43a11,11 0 0,1 -11,-11V43a11,11 0 0,1 11,-11z" />
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="4.5"
+        android:strokeWidth="5"
         android:pathData="M48,38a10,10 0 1,0 0.1,0z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M64,29a3.2,3.2 0 1,0 0.1,0z" />
+        android:pathData="M60,32.5a3.5,3.5 0 1,0 0.1,0z" />
 </vector>

@@ -153,6 +153,8 @@ object CastHelper {
         }
         CastSession.receiver = receiver
         CastSession.receiverState = "buffering"
+        CastSession.receiverPosition = -1.0
+        CastSession.receiverDuration = -1.0
         CastResult(true, "Mandando «${title.take(60)}» a la tele…")
     }
 
@@ -181,6 +183,67 @@ object CastHelper {
         }
         onProgress("Mandando «${video.title.take(50)}» a la tele…")
         return castUrl(context, client, video.url, video.title, "video", video.fmt, headers)
+    }
+
+    /** Salta a una posición exacta (s) en lo que se transmite.
+     *  1) protocolo del canal (positionSet): salto exacto, es lo que
+     *  alimenta la barra de progreso. 2) si el canal no lo acepta,
+     *  tecla ECP Fwd/Rew: el reproductor de Roku salta ~10 s.
+     *  OJO: solo se puede comprobar en la tele real; si el canal
+     *  WVC no obedece ni positionSet ni Fwd/Rew, los saltos no
+     *  funcionarán y habrá que probar con Left/Right. */
+    suspend fun receiverSeekTo(posSeconds: Int): CastResult {
+        val receiver = CastSession.receiver
+            ?: return CastResult(false, "Nada transmitiendo ahora.")
+        return try {
+            val code = receiver.positionSet(posSeconds.coerceAtLeast(0))
+            if (code in 200..299) {
+                try { receiver.positionGet() } catch (e: Exception) { }
+                CastResult(true, "Saltando a ${fmtTime(posSeconds.toDouble())}…")
+            } else {
+                CastResult(false, "El canal receptor respondió $code.")
+            }
+        } catch (e: RokuException) {
+            CastResult(false, motivoDe(e))
+        }
+    }
+
+    /** Salta ±segundos desde la última posición que reportó el canal
+     *  (eventos «position» del callback). Si aún no hay posición, se
+     *  salta desde 0. Con client se intenta el respaldo ECP Fwd/Rew. */
+    suspend fun receiverSeek(client: RokuClient?, deltaSeconds: Int): CastResult {
+        val receiver = CastSession.receiver
+            ?: return CastResult(false, "Nada transmitiendo ahora.")
+        val pos = CastSession.receiverPosition.takeIf { it >= 0 } ?: 0.0
+        val dur = CastSession.receiverDuration
+        var target = (pos + deltaSeconds).coerceAtLeast(0.0)
+        if (dur > 0) target = target.coerceAtMost(dur)
+        try {
+            val code = receiver.positionSet(target.toInt())
+            if (code in 200..299) {
+                try { receiver.positionGet() } catch (e: Exception) { }
+                return CastResult(
+                    true,
+                    if (deltaSeconds >= 0) "Adelantando 10 s…" else "Retrocediendo 10 s…"
+                )
+            }
+        } catch (e: Exception) {
+            // Se prueba el respaldo ECP
+        }
+        if (client != null) {
+            val ok = try {
+                client.keypress(if (deltaSeconds >= 0) "Fwd" else "Rew")
+            } catch (e: Exception) {
+                false
+            }
+            if (ok) {
+                return CastResult(
+                    true,
+                    if (deltaSeconds >= 0) "Adelantando 10 s…" else "Retrocediendo 10 s…"
+                )
+            }
+        }
+        return CastResult(false, "La tele no respondió al salto.")
     }
 
     /** Pausa / reanuda / para lo que se está transmitiendo. */
@@ -238,6 +301,8 @@ object CastHelper {
                 "position" -> {
                     val pos = json.optDouble("position", -1.0)
                     val dur = json.optDouble("duration", -1.0)
+                    if (pos >= 0) CastSession.receiverPosition = pos
+                    if (dur > 0) CastSession.receiverDuration = dur
                     if (pos >= 0 && dur > 0) {
                         "Reproduciendo en la tele — ${fmtTime(pos)} / ${fmtTime(dur)}"
                     } else {
@@ -251,7 +316,8 @@ object CastHelper {
         }
     }
 
-    private fun fmtTime(seconds: Double): String {
+    /** m:ss para mostrar duraciones y posiciones. */
+    fun fmtTime(seconds: Double): String {
         val total = seconds.toInt().coerceAtLeast(0)
         val m = total / 60
         val s = total % 60
