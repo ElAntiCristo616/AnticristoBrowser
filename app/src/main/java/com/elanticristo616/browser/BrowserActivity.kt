@@ -771,7 +771,8 @@ class BrowserActivity : AppCompatActivity() {
             setColorFilter(theme.accent)
         }
         header.addView(thumb)
-        if (!video.poster.isNullOrBlank()) cargarPoster(thumb, video.poster)
+        val posterUrl = video.poster
+        if (!posterUrl.isNullOrBlank()) cargarPoster(thumb, posterUrl)
         val textos = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
