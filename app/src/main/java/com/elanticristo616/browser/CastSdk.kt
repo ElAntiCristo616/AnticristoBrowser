@@ -7,6 +7,7 @@ import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
 import com.google.android.gms.cast.MediaMetadata
+import com.google.android.gms.cast.MediaSeekOptions
 import com.google.android.gms.cast.MediaStatus
 import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession as GmsCastSession
@@ -15,7 +16,6 @@ import com.google.android.gms.cast.framework.CastOptions
 import com.google.android.gms.cast.framework.SessionManager
 import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.cast.framework.SessionProvider
-import com.google.android.gms.cast.framework.media.MediaSeekOptions
 import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -165,6 +165,8 @@ object GoogleCastManager {
         }
 
         override fun onSessionStarting(session: GmsCastSession) {}
+
+        override fun onSessionResuming(session: GmsCastSession, sessionId: String) {}
 
         override fun onSessionSuspended(session: GmsCastSession, reason: Int) {}
     }
