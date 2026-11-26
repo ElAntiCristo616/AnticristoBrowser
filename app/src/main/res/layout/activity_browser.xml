@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- CuteNovna Browser v1.0.3: navegador mínimo estilo Brave (Opción B).
-     Barra superior delgada, WebView a pantalla completa, barra inferior
-     delgada. Nada tapa la página: la detección de video es solo una
-     barrita píldora que aparece cuando hay videos reales, y las
-     calidades viven en un bottom sheet. -->
+<!-- CuteNovna Browser v1.1.0: navegador mínimo (estilo v1.0.3) con el
+     look fijo neón de la referencia. Barra superior delgada, WebView
+     a pantalla completa, barra inferior delgada. La detección de video
+     es solo una barrita píldora; las calidades viven en un bottom
+     sheet. El reproductor nuevo: barra arrastrable, tiempo, play/pausa
+     grande, ±10 s, velocidad y pantalla completa. Sin temas ni
+     partículas. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_gradient">
+    android:background="@drawable/bg_neon_base">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -26,9 +28,9 @@
                 android:id="@+id/btnVolver"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:backgroundTint="@color/pine_light"
+                android:backgroundTint="@color/neo_surface_light"
                 android:text="‹"
-                android:textColor="@color/snow_white"
+                android:textColor="@color/neo_text"
                 android:textSize="22sp" />
 
             <EditText
@@ -37,26 +39,26 @@
                 android:layout_height="48dp"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:background="@drawable/card_bg"
+                android:background="@drawable/bg_card_dark"
                 android:drawablePadding="8dp"
                 android:drawableStart="@drawable/ic_lock"
-                android:drawableTint="@color/sage"
+                android:drawableTint="@color/neo_muted"
                 android:hint="Busca o escribe una dirección"
                 android:imeOptions="actionGo"
                 android:inputType="textUri"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
-                android:textColor="@color/snow_white"
-                android:textColorHint="@color/sage" />
+                android:textColor="@color/neo_text"
+                android:textColorHint="@color/neo_muted" />
 
             <Button
                 android:id="@+id/btnIr"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
                 android:layout_marginStart="8dp"
-                android:backgroundTint="@color/red_accent"
+                android:background="@drawable/bg_gradient_button"
                 android:text="Ir"
-                android:textColor="@color/snow_white"
+                android:textColor="@color/neo_text"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -92,7 +94,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_tv"
-                android:tint="@color/red_accent" />
+                android:tint="@color/neo_pink" />
 
             <TextView
                 android:id="@+id/tvPillText"
@@ -101,7 +103,7 @@
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:text="1 video ▾"
-                android:textColor="@color/snow_white"
+                android:textColor="@color/neo_text"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -109,19 +111,20 @@
                 android:id="@+id/btnPillTransmitir"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:background="@drawable/bg_red_pill"
+                android:background="@drawable/bg_gradient_button"
                 android:paddingStart="18dp"
                 android:paddingEnd="18dp"
                 android:text="Transmitir"
-                android:textColor="@color/snow_white"
+                android:textColor="@color/neo_text"
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Barrita de control mientras se transmite (oculta si no).
-             Fila 1: estado + Pausa / Seguir / Parar.
-             Fila 2 (v1.0.4): saltos -10 s / +10 s y barra de progreso
-             con el tiempo (la posición la reporta el canal). -->
+        <!-- Reproductor nuevo (oculto si no se transmite).
+             Fila 1: título + estado + Parar.
+             Fila 2: barra arrastrable + tiempo actual/total.
+             Fila 3: −10 s, play/pausa grande, +10 s, velocidad,
+             pantalla completa. -->
         <LinearLayout
             android:id="@+id/castBar"
             android:layout_width="match_parent"
@@ -132,9 +135,9 @@
             android:background="@drawable/bg_bottom_bar"
             android:orientation="vertical"
             android:paddingStart="14dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="8dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="10dp"
             android:visibility="gone">
 
             <LinearLayout
@@ -143,42 +146,40 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/tvCastBarStatus"
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Transmitiendo…"
-                    android:textColor="@color/sage"
-                    android:textSize="13sp" />
+                    android:orientation="vertical">
 
-                <Button
-                    android:id="@+id/btnCastPausa"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:backgroundTint="@color/pine_light"
-                    android:text="Pausa"
-                    android:textColor="@color/snow_white"
-                    android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/tvPlayerTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Video"
+                        android:textColor="@color/neo_text"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
 
-                <Button
-                    android:id="@+id/btnCastSeguir"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="6dp"
-                    android:backgroundTint="@color/pine_light"
-                    android:text="Seguir"
-                    android:textColor="@color/snow_white"
-                    android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/tvCastBarStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Transmitiendo…"
+                        android:textColor="@color/neo_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
                 <Button
                     android:id="@+id/btnCastParar"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
-                    android:layout_marginStart="6dp"
-                    android:backgroundTint="@color/pine_light"
+                    android:layout_marginStart="8dp"
+                    android:backgroundTint="@color/neo_surface_light"
                     android:text="Parar"
-                    android:textColor="@color/snow_white"
+                    android:textColor="@color/neo_text"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -189,21 +190,10 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/btnSeekBack"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:backgroundTint="@color/pine_light"
-                    android:text="−10 s"
-                    android:textColor="@color/snow_white"
-                    android:textSize="12sp" />
-
                 <SeekBar
                     android:id="@+id/seekCast"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     android:max="0"
                     android:progress="0" />
@@ -212,19 +202,69 @@
                     android:id="@+id/tvCastTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
                     android:text="0:00 / 0:00"
-                    android:textColor="@color/sage"
+                    android:textColor="@color/neo_muted"
                     android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnSeekBack"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:backgroundTint="@color/neo_surface_light"
+                    android:text="−10 s"
+                    android:textColor="@color/neo_text"
+                    android:textSize="13sp" />
+
+                <ImageButton
+                    android:id="@+id/btnPlayerPlay"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/bg_gradient_button"
+                    android:contentDescription="Pausa o seguir"
+                    android:padding="14dp"
+                    android:src="@drawable/ic_pause"
+                    android:tint="@color/neo_text" />
 
                 <Button
                     android:id="@+id/btnSeekFwd"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="8dp"
-                    android:backgroundTint="@color/pine_light"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="12dp"
+                    android:backgroundTint="@color/neo_surface_light"
                     android:text="+10 s"
-                    android:textColor="@color/snow_white"
-                    android:textSize="12sp" />
+                    android:textColor="@color/neo_text"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btnCastVelocidad"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="12dp"
+                    android:backgroundTint="@color/neo_surface_light"
+                    android:text="1×"
+                    android:textColor="@color/neo_text"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <ImageButton
+                    android:id="@+id/btnCastPantalla"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Pantalla completa"
+                    android:src="@drawable/ic_fullscreen"
+                    android:tint="@color/neo_muted" />
             </LinearLayout>
         </LinearLayout>
 
@@ -233,7 +273,7 @@
             android:id="@+id/navBar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:background="@color/pine_dark"
+            android:background="@color/neo_surface"
             android:gravity="center"
             android:orientation="horizontal">
 
@@ -245,7 +285,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Atrás"
                 android:src="@drawable/ic_chevron_left"
-                android:tint="@color/sage" />
+                android:tint="@color/neo_muted" />
 
             <ImageButton
                 android:id="@+id/btnNavAdelante"
@@ -255,7 +295,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Adelante"
                 android:src="@drawable/ic_chevron_right"
-                android:tint="@color/sage" />
+                android:tint="@color/neo_muted" />
 
             <FrameLayout
                 android:layout_width="0dp"
@@ -276,14 +316,14 @@
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:contentDescription="Transmitir"
                         android:src="@drawable/ic_cast"
-                        android:tint="@color/snow_white" />
+                        android:tint="@color/neo_text" />
 
                     <TextView
                         android:id="@+id/tvNavTv"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="TV"
-                        android:textColor="@color/sage"
+                        android:textColor="@color/neo_muted"
                         android:textSize="10sp" />
                 </LinearLayout>
 
@@ -307,15 +347,8 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Menú"
                 android:src="@drawable/ic_menu"
-                android:tint="@color/sage" />
+                android:tint="@color/neo_muted" />
         </LinearLayout>
     </LinearLayout>
-
-    <com.elanticristo616.browser.ParticleView
-        android:id="@+id/particleView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="false"
-        android:focusable="false" />
 
 </FrameLayout>

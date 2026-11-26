@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- CuteNovna Browser v1.1.0 — PANTALLA 2: EL LOBBY.
+     Estructura y look de la referencia (Behance "Movie Mobile App"):
+     saludo grande, barra de búsqueda, filas horizontales de tarjetas,
+     navegación inferior con botón central +. Contenido NUESTRO: link
+     para transmitir, favoritos, historial y la tele vinculada.
+     Sin accesos directos fijos, sin temas, sin partículas. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_gradient">
+    android:background="@drawable/bg_neon_base">
+
+    <com.elanticristo616.browser.NeonGlowView
+        android:id="@+id/glowView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false" />
 
     <ScrollView
         android:id="@+id/scrollPrincipal"
@@ -14,187 +27,259 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp"
-            android:paddingBottom="110dp">
+            android:paddingBottom="120dp">
 
-            <com.elanticristo616.browser.GarlandView
-                android:id="@+id/garlandView"
-                android:layout_width="match_parent"
-                android:layout_height="56dp" />
-
+            <!-- Saludo grande, como en la referencia -->
             <TextView
-                android:id="@+id/tvTitulo"
+                android:id="@+id/tvSaludo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="CuteNovna Browser"
-                android:textColor="@color/snow_white"
+                android:text="¿Qué quieres ver hoy?"
+                android:textColor="@color/neo_text"
                 android:textSize="28sp"
                 android:textStyle="bold"
-                android:layout_marginTop="8dp" />
+                android:layout_marginTop="16dp" />
 
             <TextView
-                android:id="@+id/tvSubtitulo"
+                android:id="@+id/tvSubSaludo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="Busca con DuckDuckGo y manda videos a tu tele"
-                android:textColor="@color/sage"
+                android:text="Pega un link y mándalo a tu tele"
+                android:textColor="@color/neo_muted"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Tele conectada: cambiar vuelve a la puerta -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:id="@+id/tvTvInfo"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="TV: —"
-                    android:textColor="@color/sage"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:id="@+id/tvCambiar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:padding="6dp"
-                    android:text="Cambiar"
-                    android:textColor="@color/red_accent"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Aviso v1.0.2: se entró aunque la tele no respondió -->
-            <TextView
-                android:id="@+id/tvTvWarning"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_red_pill"
-                android:gravity="center"
-                android:padding="10dp"
-                android:textColor="@color/snow_white"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:visibility="gone"
                 android:layout_marginBottom="16dp" />
 
-            <!-- DuckDuckGo -->
+            <!-- Tele vinculada -->
             <LinearLayout
+                android:id="@+id/cardTv"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/bg_card_dark"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:padding="14dp">
 
                 <ImageView
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:src="@drawable/ic_duck" />
+                    android:src="@drawable/ic_tv"
+                    android:tint="@color/neo_teal" />
 
-                <TextView
-                    android:id="@+id/tvDuck"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="DuckDuckGo"
-                    android:textColor="@color/snow_white"
-                    android:textSize="20sp"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvTvNombre"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TV vinculada"
+                        android:textColor="@color/neo_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTvDetalle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="@color/neo_muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnCambiarTv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_chip"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="Cambiar"
+                    android:textColor="@color/neo_teal"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <!-- Aviso si se entró aunque la tele no respondió -->
+            <TextView
+                android:id="@+id/tvTvWarning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip"
+                android:gravity="center"
+                android:padding="10dp"
+                android:textColor="@color/neo_pink"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:layout_marginTop="12dp" />
+
+            <!-- Pegar link + Transmitir -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_pill_white"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/bg_pill_dark"
                 android:gravity="center_vertical"
                 android:paddingStart="16dp"
                 android:paddingTop="6dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="6dp">
 
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_link"
+                    android:tint="@color/neo_muted" />
+
                 <EditText
-                    android:id="@+id/etBuscar"
+                    android:id="@+id/etLink"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:layout_marginStart="8dp"
                     android:background="@android:color/transparent"
-                    android:hint="Busca con DuckDuckGo"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:textColor="@color/ink"
-                    android:textColorHint="@color/hint_gray"
+                    android:hint="Pega el link del video…"
+                    android:imeOptions="actionGo"
+                    android:inputType="textUri"
+                    android:textColor="@color/neo_text"
+                    android:textColorHint="@color/neo_muted"
                     android:textSize="16sp" />
+            </LinearLayout>
 
-                <Button
-                    android:id="@+id/btnBuscarWeb"
+            <Button
+                android:id="@+id/btnTransmitir"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_gradient_button"
+                android:text="Transmitir"
+                android:textColor="@color/neo_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <!-- Favoritos -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvFavoritos"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Favoritos"
+                    android:textColor="@color/neo_text"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAgregarFav"
                     android:layout_width="wrap_content"
-                    android:layout_height="44dp"
-                    android:background="@drawable/bg_red_pill"
-                    android:minWidth="64dp"
-                    android:text="Ir"
-                    android:textColor="@color/snow_white"
-                    android:textSize="16sp"
+                    android:layout_height="wrap_content"
+                    android:padding="8dp"
+                    android:text="+ Agregar"
+                    android:textColor="@color/neo_teal"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tvAccesos"
+            <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Accesos rápidos"
-                android:textColor="@color/snow_white"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginTop="12dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/rowFavoritos"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <TextView
+                android:id="@+id/tvFavoritosVacio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Aún no tienes favoritos. Agrega los sitios que más usas."
+                android:textColor="@color/neo_muted"
+                android:textSize="13sp"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+            <!-- Historial -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvHistorial"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Historial"
+                    android:textColor="@color/neo_text"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvLimpiarHistorial"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="8dp"
+                    android:text="Limpiar"
+                    android:textColor="@color/neo_teal"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/quickRow"
+                android:id="@+id/listaHistorial"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="5" />
+                android:layout_marginTop="12dp"
+                android:orientation="vertical" />
 
-            <Button
-                android:id="@+id/btnTema"
+            <TextView
+                android:id="@+id/tvHistorialVacio"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:backgroundTint="@color/pine_light"
-                android:text="Tema: Navidad"
-                android:textColor="@color/snow_white" />
+                android:text="Nada por aquí todavía. Los links que transmitas aparecerán aquí."
+                android:textColor="@color/neo_muted"
+                android:textSize="13sp"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
 
             <Button
                 android:id="@+id/btnAcercaDe"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="16dp"
-                android:backgroundTint="@color/pine_light"
+                android:layout_height="48dp"
+                android:layout_marginTop="28dp"
+                android:background="@drawable/bg_card_dark"
                 android:text="Acerca de"
-                android:textColor="@color/snow_white" />
+                android:textColor="@color/neo_text"
+                android:textSize="14sp" />
         </LinearLayout>
     </ScrollView>
 
-    <com.elanticristo616.browser.ParticleView
-        android:id="@+id/particleView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="false"
-        android:focusable="false" />
-
-    <!-- Barra inferior: Inicio / Buscar / Cast -->
+    <!-- Barra inferior estilo referencia: Inicio / Navegador /
+         botón central + / Favoritos / Historial -->
     <LinearLayout
         android:id="@+id/navBar"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
+        android:layout_height="76dp"
         android:layout_gravity="bottom"
         android:layout_margin="16dp"
         android:background="@drawable/bg_bottom_bar"
@@ -212,21 +297,22 @@
             android:orientation="vertical">
 
             <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_home" />
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_home"
+                android:tint="@color/neo_text" />
 
             <TextView
                 android:id="@+id/tvNavInicio"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Inicio"
-                android:textColor="@color/snow_white"
-                android:textSize="12sp" />
+                android:textColor="@color/neo_text"
+                android:textSize="11sp" />
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/navBuscar"
+            android:id="@+id/navNavegador"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -234,21 +320,39 @@
             android:orientation="vertical">
 
             <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_search" />
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_globe"
+                android:tint="@color/neo_muted" />
 
             <TextView
-                android:id="@+id/tvNavBuscar"
+                android:id="@+id/tvNavNavegador"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Buscar"
-                android:textColor="@color/sage"
-                android:textSize="12sp" />
+                android:text="Navegador"
+                android:textColor="@color/neo_muted"
+                android:textSize="11sp" />
         </LinearLayout>
 
+        <FrameLayout
+            android:id="@+id/navCentral"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_nav_center"
+                android:padding="14dp"
+                android:src="@drawable/ic_plus"
+                android:tint="@color/neo_text" />
+        </FrameLayout>
+
         <LinearLayout
-            android:id="@+id/navCast"
+            android:id="@+id/navFavoritos"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -256,19 +360,41 @@
             android:orientation="vertical">
 
             <ImageView
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="@drawable/bg_red_circle"
-                android:padding="9dp"
-                android:src="@drawable/ic_cast" />
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_folder"
+                android:tint="@color/neo_muted" />
 
             <TextView
-                android:id="@+id/tvNavCast"
+                android:id="@+id/tvNavFavoritos"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cast"
-                android:textColor="@color/red_accent"
-                android:textSize="12sp" />
+                android:text="Favoritos"
+                android:textColor="@color/neo_muted"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navHistorial"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_history"
+                android:tint="@color/neo_muted" />
+
+            <TextView
+                android:id="@+id/tvNavHistorial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Historial"
+                android:textColor="@color/neo_muted"
+                android:textSize="11sp" />
         </LinearLayout>
     </LinearLayout>
 

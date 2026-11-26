@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.AnticristoBrowser" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">@color/red_accent</item>
-        <item name="colorOnPrimary">@color/snow_white</item>
-        <item name="colorPrimaryContainer">@color/pine</item>
-        <item name="colorOnPrimaryContainer">@color/snow_white</item>
-        <item name="colorSecondary">@color/sage</item>
-        <item name="colorSurface">@color/pine</item>
-        <item name="colorOnSurface">@color/snow_white</item>
-        <item name="android:windowBackground">@color/pine_dark</item>
-        <item name="android:textColor">@color/snow_white</item>
-        <item name="android:textColorHint">@color/sage</item>
+        <item name="colorPrimary">@color/neo_pink</item>
+        <item name="colorOnPrimary">@color/neo_text</item>
+        <item name="colorPrimaryContainer">@color/neo_surface_light</item>
+        <item name="colorOnPrimaryContainer">@color/neo_text</item>
+        <item name="colorSecondary">@color/neo_teal</item>
+        <item name="colorSurface">@color/neo_surface</item>
+        <item name="colorOnSurface">@color/neo_text</item>
+        <item name="android:windowBackground">@color/neo_bg_bottom</item>
+        <item name="android:textColor">@color/neo_text</item>
+        <item name="android:textColorHint">@color/neo_muted</item>
     </style>
 </resources>

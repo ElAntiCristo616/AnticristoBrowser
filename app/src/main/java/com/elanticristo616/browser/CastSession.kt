@@ -15,6 +15,10 @@ object CastSession {
     /** Nombre de la tele conectada. */
     var rokuName: String? = null
 
+    /** Tele vinculada ahora mismo, sea Roku, Chromecast o DLNA
+     *  (v1.1.0: transmisión universal). */
+    var activeTarget: CastTarget? = null
+
     /** Aviso visible en el portal cuando se entró aunque la tele no
      *  respondió al chequeo (v1.0.2: la puerta ya no bloquea la
      *  entrada). Null si la tele sí respondió. */
@@ -89,7 +93,7 @@ object CastSession {
         throw lastError ?: IllegalStateException("No se pudo levantar el servidor local")
     }
 
-    /** Apaga el servidor y olvida el receptor. */
+    /** Apaga el servidor y olvida el receptor y la tele vinculada. */
     fun reset() {
         try { server?.stop() } catch (e: Exception) { }
         server = null
@@ -98,5 +102,6 @@ object CastSession {
         receiverDeviceInfo = null
         receiverPosition = -1.0
         receiverDuration = -1.0
+        activeTarget = null
     }
 }

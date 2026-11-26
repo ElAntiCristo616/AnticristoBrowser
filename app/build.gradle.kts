@@ -11,8 +11,8 @@ android {
         applicationId = "com.elanticristo616.browser"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "1.1.0"
 
         // yt-dlp trae Python compilado por ABI (~15 MB por ABI):
         // solo arm64 y armeabi-v7a cubren prácticamente todos los
@@ -71,6 +71,13 @@ dependencies {
     // directo de un enlace sin descargar nada. GPL-3.0: por eso esta
     // app es de código abierto.
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+
+    // Google Cast / Chromecast (v1.1.0): SDK oficial para descubrir
+    // teles Chromecast, mandarles el video y controlarlo (play/pausa,
+    // seek, velocidad). El receptor por defecto reproduce URLs
+    // directas (MP4, HLS, DASH) sin app propia en la tele.
+    implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
+    implementation("androidx.mediarouter:mediarouter:1.7.0")
 
     testImplementation("junit:junit:4.13.2")
 }

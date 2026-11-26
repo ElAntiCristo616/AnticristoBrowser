@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Botón principal v1.1.0: degradado neón rosa → teal, como el
+     botón central de la referencia. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="0"
+        android:endColor="@color/neo_teal"
+        android:startColor="@color/neo_pink" />
+    <corners android:radius="28dp" />
+</shape>

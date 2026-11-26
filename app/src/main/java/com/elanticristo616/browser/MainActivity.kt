@@ -2,7 +2,6 @@ package com.elanticristo616.browser
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -12,38 +11,34 @@ import com.elanticristo616.browser.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
 /**
- * CuteNovna Browser v1.0.2 — PANTALLA 1: LA PUERTA.
+ * CuteNovna Browser v1.1.0 — PANTALLA 1: LA PUERTA.
  *
- * La IP de la tele es el requisito para entrar al portal: esta
- * pantalla es SOLO «Conectar a la tele», nada más. Sin buscador,
- * sin accesos rápidos, sin barra inferior y sin descubrimiento:
- * la conexión es solo por IP manual.
+ * La tele vinculada es el requisito para entrar al portal. Dos
+ * caminos:
+ *  1) Conectar por IP (Roku): se valida la IPv4 y se comprueba la
+ *     tele con RokuClient.checkReachable (GET
+ *     http://<ip>:8060/query/device-info, timeout 10 s, hasta 3
+ *     intentos; CUALQUIER código HTTP cuenta como «tele
+ *     alcanzable»). LA PUERTA YA NO BLOQUEA: si el chequeo falla
+ *     tras los reintentos, la IP se guarda IGUAL y se entra al
+ *     portal con un aviso («La tele no respondió en esa IP, revisa
+ *     que esté prendida. Podrás transmitir cuando responda»).
+ *  2) «Buscar teles»: descubre Roku, Chromecast y DLNA en el
+ *     Wi-Fi y se elige una de la hoja; esa tele queda vinculada
+ *     (TargetStore) y se entra directo.
  *
- * Al pulsar «Conectar por IP» se valida la IPv4 y se comprueba la
- * tele con RokuClient.checkReachable: GET
- * http://<ip>:8060/query/device-info, timeout 10 s, hasta 3
- * intentos, y CUALQUIER código HTTP cuenta como «tele alcanzable».
+ * Al abrir la app, si hay una tele vinculada guardada se intenta
+ * restaurarla (descubrimiento rápido y coincidencia por id); si
+ * no se encuentra, se queda en la puerta. Si no hay tele guardada
+ * pero sí una IP de Roku, se auto-conecta con la misma
+ * comprobación de antes.
  *
- * v1.0.2 — LA PUERTA YA NO BLOQUEA: si el chequeo falla tras los
- * reintentos, la IP se guarda IGUAL y se entra al portal con un
- * aviso visible («La tele no respondió en esa IP, revisa que esté
- * prendida. Podrás transmitir cuando responda»). La v1.0.1 dejaba
- * fuera al usuario con un falso negativo: parseDeviceInfo borraba
- * el nombre/modelo con el texto en blanco entre etiquetas del XML
- * (ver RokuClient), así que queryDeviceInfo siempre devolvía null
- * aunque la tele respondiera 200. La IP sigue siendo obligatoria
- * para entrar; lo que cambia es que un chequeo que falle ya no
- * deja al usuario fuera de su propia app. Al transmitir se
- * reintenta la conexión en ese momento (CastHelper).
- *
- * Al abrir la app, si hay una IP guardada se intenta conectar
- * automáticamente con la misma comprobación; si la tele responde
- * se entra directo, y si no, se entra igual con el aviso.
+ * Look fijo neón de la referencia (v1.1.0): sin temas ni
+ * partículas.
  */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var theme: ThemeManager.BrowserTheme
 
     private val prefs by lazy { getSharedPreferences("roku", Context.MODE_PRIVATE) }
 
@@ -51,13 +46,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        theme = ThemeManager.current(this)
-        aplicarTema()
 
         binding.btnConectarIp.setOnClickListener { conectarPorIp() }
         binding.etIpManual.setOnEditorActionListener { _, _, _ ->
             conectarPorIp(); true
         }
+        binding.btnBuscarTeles.setOnClickListener { buscarTeles() }
 
         val savedIp = prefs.getString("last_ip", null)
         if (savedIp != null) {
@@ -73,30 +67,88 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // Tele vinculada guardada (cualquier protocolo): restaurarla.
+        val savedTarget = TargetStore.load(this)
+        if (savedTarget != null) {
+            binding.tvStatusTele.text = "Conectando con ${savedTarget.name}…"
+            restaurarTeleGuardada(savedTarget)
+            return
+        }
+
         if (savedIp != null) {
             binding.tvStatusTele.text = "Conectando con $savedIp…"
             conectar(savedIp)
         }
     }
 
-    /** Paleta + partículas del tema guardado en la puerta. */
-    private fun aplicarTema() {
-        val density = resources.displayMetrics.density
-        binding.root.background = ThemeManager.gradient(theme)
-        binding.particleView.setTheme(theme.particles, theme.particleColor)
-        binding.garlandView.visibility =
-            if (theme.garland) View.VISIBLE else View.GONE
-        binding.tvTitulo.setTextColor(theme.text)
-        binding.tvSubtitulo.setTextColor(theme.muted)
-        binding.tvConectar.setTextColor(theme.text)
-        binding.tvStatusTele.setTextColor(theme.text)
-        binding.tvAyudaIp.setTextColor(theme.text)
-        binding.tvAyudaCanal.setTextColor(theme.text)
-        binding.cardConectar.background =
-            ThemeManager.roundedSurface(theme, 8f, density)
-        binding.btnConectarIp.backgroundTintList =
-            ColorStateList.valueOf(theme.accent)
-        binding.btnConectarIp.setTextColor(0xFFFFFFFF.toInt())
+    /** Busca la tele guardada entre las teles del Wi-Fi y entra
+     *  directo si aparece; si no, se queda en la puerta. */
+    private fun restaurarTeleGuardada(saved: TargetStore.SavedTarget) {
+        lifecycleScope.launch {
+            val targets = try {
+                DeviceDiscovery.discoverAll(this@MainActivity)
+            } catch (e: Exception) {
+                emptyList()
+            }
+            val found = targets.firstOrNull { it.id == saved.id }
+            if (found != null) {
+                vincular(found, entrar = true)
+                return@launch
+            }
+            // La Roku guardada por IP se reintenta por IP aunque el
+            // SSDP no la haya visto.
+            if (saved.protocol == "Roku" && saved.detail.isNotBlank()) {
+                conectar(saved.detail)
+                return@launch
+            }
+            binding.tvStatusTele.text =
+                "No encontré «${saved.name}». Elige otra tele o escribe su IP."
+            TargetStore.clear(this@MainActivity)
+        }
+    }
+
+    /** Descubre Roku + Chromecast + DLNA y muestra la hoja. */
+    private fun buscarTeles() {
+        binding.tvBuscando.visibility = View.VISIBLE
+        binding.btnBuscarTeles.isEnabled = false
+        lifecycleScope.launch {
+            val targets = try {
+                DeviceDiscovery.discoverAll(this@MainActivity)
+            } catch (e: Exception) {
+                emptyList()
+            }
+            binding.tvBuscando.visibility = View.GONE
+            binding.btnBuscarTeles.isEnabled = true
+            DestinationPicker.show(
+                this@MainActivity, targets,
+                onPick = { target -> vincular(target, entrar = true) },
+                onSearch = { buscarTeles() }
+            )
+        }
+    }
+
+    /** Vincula una tele: queda como activa, se guarda y se entra
+     *  al portal. Para Roku también se guarda la IP. */
+    private fun vincular(target: CastTarget, entrar: Boolean) {
+        CastSession.activeTarget = target
+        TargetStore.save(this, target)
+        if (target is RokuCastTarget) {
+            CastSession.rokuIp = target.ip
+            CastSession.rokuName = target.name
+            CastSession.tvWarning = null
+            prefs.edit()
+                .putString("last_ip", target.ip)
+                .putString("last_name", target.name)
+                .apply()
+            binding.tvStatusTele.text = "Conectado con ${target.name} (${target.ip})."
+        } else {
+            binding.tvStatusTele.text =
+                "Conectado con ${target.name} (${target.protocol})."
+        }
+        if (entrar) {
+            startActivity(Intent(this, PortalActivity::class.java))
+            finish()
+        }
     }
 
     /** Valida la IP escrita y comprueba la tele. */
@@ -160,6 +212,8 @@ class MainActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG
                 ).show()
             }
+            CastSession.activeTarget = RokuCastTarget(ip, name)
+            TargetStore.save(this@MainActivity, CastSession.activeTarget!!)
             startActivity(Intent(this@MainActivity, PortalActivity::class.java))
             finish()
         }

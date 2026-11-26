@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Tarjeta oscura del look fijo v1.1.0. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="@color/pine" />
-    <corners android:radius="16dp" />
+    <solid android:color="@color/neo_surface" />
+    <corners android:radius="20dp" />
     <stroke
         android:width="1dp"
-        android:color="@color/sage" />
+        android:color="@color/neo_border" />
 </shape>

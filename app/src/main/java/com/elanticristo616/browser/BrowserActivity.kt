@@ -21,6 +21,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
@@ -44,7 +45,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * CuteNovna Browser v1.0.4: navegador mínimo estilo Brave (Opción B).
+ * CuteNovna Browser v1.1.0: navegador mínimo estilo Brave (Opción B).
  *  - Barra superior delgada, WebView a pantalla completa, barra
  *    inferior delgada (atrás, adelante, transmitir, menú). Nada tapa
  *    la página: no hay hub gigante debajo del WebView.
@@ -54,8 +55,9 @@ import java.net.URL
  *    DENTRO van sus calidades. El video principal (el reproductor
  *    más grande/visible, o el que coincide con el título) va
  *    PRIMERO con su insignia dorada «Video principal». Los
- *    anuncios quedan fuera: marcadores de URL, contenedores de
- *    anuncios, videos ocultos o muy cortos (< 10 s).
+ *    anuncios quedan fuera SIEMPRE (AdFilter: marcadores de URL,
+ *    contenedores de anuncios, títulos de anuncio, videos ocultos
+ *    o muy cortos < 10 s).
  *  - Al tocar una tarjeta queda marcada (borde dorado + ✓) y se
  *    despliegan sus calidades; al tocar una calidad queda marcada
  *    (radio lleno + fondo resaltado). Miniatura del póster y
@@ -67,17 +69,18 @@ import java.net.URL
  *  - Al empezar a transmitir se PAUSA el video del teléfono para que
  *    la tele no se pause sola, y se mandan SIEMPRE los headers del
  *    video (User-Agent, Referer, Origin) al receptor.
- *  - Controles del reproductor mientras se transmite (barrita de
- *    transmisión): Pausa / Seguir / Parar + saltos −10 s / +10 s y
- *    barra de progreso. Los saltos usan el protocolo del canal
- *    (positionSet, exacto) con respaldo ECP Fwd/Rew; la posición
- *    llega por los eventos «position» del canal y se sondea cada
- *    5 s. Solo se puede probar en la tele real.
+ *  - Reproductor nuevo (v1.1.0): barra de progreso ARRASTRABLE con
+ *    el dedo, tiempo actual/total, play/pausa grande, saltos −10 s
+ *    / +10 s, velocidad (solo Chromecast) y pantalla completa. Todo
+ *    funciona en los 3 protocolos (Roku, Chromecast, DLNA) por
+ *    UniversalCast; la posición se sondea cada 5 s. En DLNA solo se
+ *    ofrecen calidades MP4.
  *  - TikTok: user-agent de Chrome móvil real (sin «wv»), cookies
  *    de terceros aceptadas y entrada por www.tiktok.com; los
  *    enlaces tiktok:// o intent:// se abren fuera o se ignoran.
- *  - Temas: paleta + partículas del tema guardado (ThemeManager);
- *    el selector está en el menú ⋮ («Tema»).
+ *  - Look fijo neón de la referencia (v1.1.0): SIN temas ni
+ *    partículas. El menú ⋮ trae «Elegir tele» para cambiar de
+ *    destino (Roku, Chromecast o DLNA).
  * Sin configuración: no hay menú ni pantalla de ajustes en la app y
  * el buscador es fijo DuckDuckGo. La página de ajustes del propio
  * DuckDuckGo (duckduckgo.com/settings*) está bloqueada: no se carga
@@ -86,7 +89,6 @@ import java.net.URL
 class BrowserActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityBrowserBinding
-    private lateinit var theme: ThemeManager.BrowserTheme
     private var client: RokuClient? = null
     private var pageTitle: String = ""
     private var currentUrl: String = ""
@@ -97,6 +99,26 @@ class BrowserActivity : AppCompatActivity() {
 
     /** El usuario está arrastrando la barra de progreso. */
     private var seeking = false
+
+    /** El usuario está arrastrando la barra del diálogo grande. */
+    private var dialogSeeking = false
+
+    /** Velocidad actual del reproductor (solo Chromecast la cambia). */
+    private var currentSpeed = 1.0f
+
+    /** ¿Suena ahora mismo lo que se transmite? */
+    private var isPlayingNow = false
+
+    /** Título de lo que se transmite (barra + diálogo). */
+    private var currentTitle = "Video"
+
+    /** Diálogo de pantalla completa del reproductor. */
+    private var playerDialog: AlertDialog? = null
+    private var dlgSeek: SeekBar? = null
+    private var dlgTime: TextView? = null
+    private var dlgStatus: TextView? = null
+    private var dlgPlay: ImageButton? = null
+    private var dlgSpeed: Button? = null
 
     /** Un video DISTINTO de la página: sus fuentes (variantes de
      *  calidad del mismo video) viven juntas en `sources`; sus
@@ -141,11 +163,11 @@ class BrowserActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityBrowserBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        theme = ThemeManager.current(this)
-        aplicarTema()
+        aplicarEstilo()
 
-        val ip = CastSession.rokuIp
-        if (ip == null) {
+        // Sin tele vinculada no hay navegador: de vuelta a la puerta.
+        val target = UniversalCast.activeTarget()
+        if (target == null) {
             Toast.makeText(
                 this,
                 "Primero conecta tu tele en la pantalla principal.",
@@ -154,9 +176,13 @@ class BrowserActivity : AppCompatActivity() {
             finish()
             return
         }
-        client = RokuClient(ip)
+        if (target is RokuCastTarget) {
+            client = RokuClient(target.ip)
+        }
         // Punto verde en el botón de transmitir: conectado a la tele.
         binding.dotConexion.visibility = View.VISIBLE
+        binding.tvNavTv.text = target.protocol
+        updateSpeedButton()
 
         binding.btnVolver.setOnClickListener { finish() }
         binding.btnIr.setOnClickListener { irA(binding.etDireccion.text.toString()) }
@@ -177,18 +203,19 @@ class BrowserActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Conectado a ${CastSession.rokuName ?: "Roku TV"}: " +
+                    "Conectado a ${UniversalCast.activeLabel()}: " +
                         "no hay video en esta página.",
                     Toast.LENGTH_SHORT
                 ).show()
             }
         }
         binding.btnNavMenu.setOnClickListener { mostrarMenu() }
-        binding.btnCastPausa.setOnClickListener { comandoReceptor("pause") }
-        binding.btnCastSeguir.setOnClickListener { comandoReceptor("resume") }
         binding.btnCastParar.setOnClickListener { comandoReceptor("stop") }
+        binding.btnPlayerPlay.setOnClickListener { togglePlayPause() }
         binding.btnSeekBack.setOnClickListener { saltar(-10) }
         binding.btnSeekFwd.setOnClickListener { saltar(10) }
+        binding.btnCastVelocidad.setOnClickListener { cycleSpeed() }
+        binding.btnCastPantalla.setOnClickListener { showPlayerDialog() }
         binding.seekCast.setOnSeekBarChangeListener(
             object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(
@@ -197,7 +224,7 @@ class BrowserActivity : AppCompatActivity() {
                     if (fromUser) {
                         binding.tvCastTime.text =
                             "${CastHelper.fmtTime(progress.toDouble())} / " +
-                                CastHelper.fmtTime(CastSession.receiverDuration)
+                                CastHelper.fmtTime((seekBar?.max ?: 0).toDouble())
                     }
                 }
 
@@ -209,7 +236,7 @@ class BrowserActivity : AppCompatActivity() {
                     seeking = false
                     val pos = seekBar?.progress ?: return
                     lifecycleScope.launch {
-                        val res = CastHelper.receiverSeekTo(pos)
+                        val res = UniversalCast.seekTo(pos)
                         if (binding.castBar.visibility == View.VISIBLE) {
                             binding.tvCastBarStatus.text = res.message
                         }
@@ -279,44 +306,14 @@ class BrowserActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- Tema ----------
+    // ---------- Estilo fijo neón (v1.1.0) ----------
 
-    /** Paleta + partículas del tema guardado en todo el chrome. */
-    private fun aplicarTema() {
-        val density = resources.displayMetrics.density
-        binding.root.background = ThemeManager.gradient(theme)
-        binding.particleView.setTheme(theme.particles, theme.particleColor)
-        binding.btnVolver.backgroundTintList = ColorStateList.valueOf(theme.surfaceLight)
-        binding.btnVolver.setTextColor(theme.text)
-        binding.etDireccion.background =
-            ThemeManager.roundedSurface(theme, 16f, density)
-        binding.etDireccion.setTextColor(theme.text)
-        binding.etDireccion.setHintTextColor(theme.muted)
-        binding.btnIr.backgroundTintList = ColorStateList.valueOf(theme.accent)
-        binding.btnIr.setTextColor(0xFFFFFFFF.toInt())
-        binding.navBar.setBackgroundColor(theme.surface)
-        binding.btnNavAtras.imageTintList = ColorStateList.valueOf(theme.muted)
-        binding.btnNavAdelante.imageTintList = ColorStateList.valueOf(theme.muted)
-        binding.btnNavTransmitir.imageTintList = ColorStateList.valueOf(theme.text)
-        binding.tvNavTv.setTextColor(theme.muted)
-        binding.btnNavMenu.imageTintList = ColorStateList.valueOf(theme.muted)
-        binding.pillDetected.background =
-            ThemeManager.roundedSurface(theme, 16f, density)
-        binding.tvPillText.setTextColor(theme.text)
-        binding.btnPillTransmitir.background = ThemeManager.accentPill(theme, density)
-        binding.castBar.background =
-            ThemeManager.roundedSurface(theme, 16f, density)
-        binding.tvCastBarStatus.setTextColor(theme.muted)
-        binding.tvCastTime.setTextColor(theme.muted)
-        for (b in listOf(
-            binding.btnCastPausa, binding.btnCastSeguir, binding.btnCastParar,
-            binding.btnSeekBack, binding.btnSeekFwd
-        )) {
-            b.backgroundTintList = ColorStateList.valueOf(theme.surfaceLight)
-            b.setTextColor(theme.text)
-        }
-        binding.seekCast.progressTintList = ColorStateList.valueOf(theme.accent)
-        binding.seekCast.thumbTintList = ColorStateList.valueOf(theme.accent)
+    /** Paleta fija de la referencia: sin temas ni partículas. Casi
+     *  todo el estilo ya vive en los layouts (XML); aquí solo van
+     *  los tintes que no se pueden poner en XML. */
+    private fun aplicarEstilo() {
+        binding.seekCast.progressTintList = ColorStateList.valueOf(AppStyle.PINK)
+        binding.seekCast.thumbTintList = ColorStateList.valueOf(AppStyle.PINK)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -442,26 +439,9 @@ class BrowserActivity : AppCompatActivity() {
 
     // ---------- Filtro de anuncios ----------
 
-    /** Marcadores de publicidad en URLs de video: redes de anuncios,
-     *  servidores de ads, VAST y preroll/midroll. Nunca se usa "ad"
-     *  solo: rompería URLs normales ("load", "download"...). */
-    private val AD_URL_MARKERS = listOf(
-        "doubleclick", "googlesyndication", "googleads", "imasdk", "ima3",
-        "vast", "vpaid", "preroll", "midroll", "postroll", "adserver",
-        "adservice", "adsense", "adtech", "advert", "sponsor", "criteo",
-        "taboola", "outbrain", "adnxs", "moatads", "adbreak", "ads.",
-        ".ads.", "/ads/", "pubmatic", "rubiconproject", "smartadserver",
-        "adform", "flashtalking", "exoclick", "adcash", "popads",
-        "trafficjunky", "juicyads", "adsterra", "propellerads",
-        "hilltopads", "clickadu", "popunder", "popup", "banner",
-        "promo", "teaser", "prebid", "dfp", "adroll", "adsystem"
-    )
-
-    /** ¿La URL huele a anuncio? */
-    private fun isAdUrl(u: String): Boolean {
-        val lower = u.lowercase()
-        return AD_URL_MARKERS.any { lower.contains(it) }
-    }
+    /** ¿La URL huele a anuncio? (AdFilter: marcadores de redes de
+     *  publicidad, VAST, preroll/midroll y patrocinados.) */
+    private fun isAdUrl(u: String): Boolean = AdFilter.isAdUrl(u)
 
     // ---------- Detección de video (agrupada) ----------
 
@@ -675,10 +655,12 @@ class BrowserActivity : AppCompatActivity() {
 
     /** Abre la hoja con la lista de videos. El video principal va
      *  PRIMERO; los demás después, en orden de aparición. Si se pasa
-     *  un video (enlace pegado con yt-dlp), la hoja trae solo ese. */
+     *  un video (enlace pegado con yt-dlp), la hoja trae solo ese.
+     *  Los anuncios nunca entran (título con pinta de anuncio). */
     private fun abrirHojaVideos(unVideo: DetectedVideo? = null) {
-        val videos = if (unVideo != null) listOf(unVideo)
-        else detectedVideos.values.sortedWith(compareByDescending { it.isMain })
+        val videos = (if (unVideo != null) listOf(unVideo)
+        else detectedVideos.values.sortedWith(compareByDescending { it.isMain }))
+            .filter { !AdFilter.isAdTitle(tituloPara(it)) }
         if (videos.isEmpty()) {
             Toast.makeText(this, "No hay video en esta página.", Toast.LENGTH_SHORT).show()
             return
@@ -689,17 +671,17 @@ class BrowserActivity : AppCompatActivity() {
         val density = resources.displayMetrics.density
         view.background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            setColor(theme.surface)
+            setColor(AppStyle.SURFACE)
             cornerRadii = floatArrayOf(
                 24f * density, 24f * density, 24f * density, 24f * density,
                 0f, 0f, 0f, 0f
             )
         }
-        view.findViewById<TextView>(R.id.sheetTitle).setTextColor(theme.text)
-        view.findViewById<TextView>(R.id.sheetSubtitle).setTextColor(theme.muted)
+        view.findViewById<TextView>(R.id.sheetTitle).setTextColor(AppStyle.TEXT)
+        view.findViewById<TextView>(R.id.sheetSubtitle).setTextColor(AppStyle.MUTED)
         view.findViewById<Button>(R.id.btnSheetCerrar).apply {
-            backgroundTintList = ColorStateList.valueOf(theme.surfaceLight)
-            setTextColor(theme.text)
+            backgroundTintList = ColorStateList.valueOf(AppStyle.SURFACE_LIGHT)
+            setTextColor(AppStyle.TEXT)
         }
         hojaContainer = view.findViewById(R.id.sheetVideoList)
         view.findViewById<Button>(R.id.btnSheetCerrar).setOnClickListener {
@@ -736,14 +718,14 @@ class BrowserActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setColor(if (video.isMain) theme.surfaceLight else theme.surface)
+                setColor(if (video.isMain) AppStyle.SURFACE_LIGHT else AppStyle.SURFACE)
                 cornerRadius = 16f * density
                 if (video.selected) {
                     setStroke((3f * density).toInt(), gold)
                 } else if (video.isMain) {
                     setStroke((1f * density).toInt(), gold)
                 } else {
-                    setStroke((1f * density).toInt(), theme.muted)
+                    setStroke((1f * density).toInt(), AppStyle.MUTED)
                 }
             }
             setPadding(dp(12), dp(12), dp(12), dp(12))
@@ -763,12 +745,12 @@ class BrowserActivity : AppCompatActivity() {
             scaleType = ImageView.ScaleType.CENTER_CROP
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setColor(theme.surfaceLight)
+                setColor(AppStyle.SURFACE_LIGHT)
                 cornerRadius = 8f * density
             }
             clipToOutline = true
             setImageResource(R.drawable.ic_tv)
-            setColorFilter(theme.accent)
+            setColorFilter(AppStyle.PINK)
         }
         header.addView(thumb)
         val posterUrl = video.poster
@@ -781,7 +763,7 @@ class BrowserActivity : AppCompatActivity() {
         }
         val tvTitulo = TextView(this).apply {
             text = tituloPara(video)
-            setTextColor(theme.text)
+            setTextColor(AppStyle.TEXT)
             textSize = 14f
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
@@ -808,7 +790,7 @@ class BrowserActivity : AppCompatActivity() {
         }
         val tvSub = TextView(this).apply {
             text = subtituloPara(video)
-            setTextColor(theme.muted)
+            setTextColor(AppStyle.MUTED)
             textSize = 12f
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
@@ -843,7 +825,7 @@ class BrowserActivity : AppCompatActivity() {
             if (!video.resolved) {
                 card.addView(TextView(this).apply {
                     text = "Leyendo calidades…"
-                    setTextColor(theme.muted)
+                    setTextColor(AppStyle.MUTED)
                     textSize = 13f
                     setPadding(0, dp(10), 0, 0)
                 })
@@ -857,7 +839,7 @@ class BrowserActivity : AppCompatActivity() {
                         background = if (elegida) {
                             GradientDrawable().apply {
                                 shape = GradientDrawable.RECTANGLE
-                                setColor(theme.surfaceLight)
+                                setColor(AppStyle.SURFACE_LIGHT)
                                 cornerRadius = 8f * density
                             }
                         } else null
@@ -869,7 +851,7 @@ class BrowserActivity : AppCompatActivity() {
                     }
                     val rb = RadioButton(this).apply {
                         isChecked = elegida
-                        buttonTintList = ColorStateList.valueOf(theme.accent)
+                        buttonTintList = ColorStateList.valueOf(AppStyle.PINK)
                         isClickable = false
                         isFocusable = false
                     }
@@ -879,7 +861,7 @@ class BrowserActivity : AppCompatActivity() {
                             if (opt.height == mayor && video.qualities.size > 1) {
                                 " • Recomendado"
                             } else ""
-                        setTextColor(theme.text)
+                        setTextColor(AppStyle.TEXT)
                         textSize = 14f
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -894,7 +876,7 @@ class BrowserActivity : AppCompatActivity() {
                 }
                 val btn = Button(this).apply {
                     text = "Transmitir este video a la tele"
-                    background = ThemeManager.accentPill(theme, density)
+                    background = AppStyle.gradientButton(density)
                     setTextColor(0xFFFFFFFF.toInt())
                     textSize = 15f
                     layoutParams = LinearLayout.LayoutParams(
@@ -997,6 +979,11 @@ class BrowserActivity : AppCompatActivity() {
                     listOf(YtDlpExtractor.QualityOption(h, video.url, fmtFor(video.url)))
                 }
             }
+            // DLNA solo reproduce MP4 directo: fuera HLS y DASH.
+            if (UniversalCast.activeTarget() is DlnaCastTarget) {
+                val mp4 = video.qualities.filter { it.fmt == "mp4" }
+                if (mp4.isNotEmpty()) video.qualities = mp4
+            }
             // Por defecto, la más alta
             video.selectedHeight = video.qualities.maxByOrNull { it.height }?.height
             video.resolved = true
@@ -1004,18 +991,18 @@ class BrowserActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- Menú inferior: pegar enlace, tema ----------
+    // ---------- Menú inferior: pegar enlace, elegir tele ----------
 
     private fun mostrarMenu() {
         val menu = PopupMenu(this, binding.btnNavMenu)
         menu.menu.add("Pegar enlace")
-        menu.menu.add("Tema")
+        menu.menu.add("Elegir tele")
         menu.menu.add("Recargar página")
         menu.menu.add("Ir a DuckDuckGo")
         menu.setOnMenuItemClickListener { item ->
             when (item.title.toString()) {
                 "Pegar enlace" -> mostrarDialogoEnlace()
-                "Tema" -> ThemeManager.showPicker(this)
+                "Elegir tele" -> abrirSelectorDestinos()
                 "Recargar página" -> binding.webView.reload()
                 "Ir a DuckDuckGo" -> irA("https://duckduckgo.com")
             }
@@ -1028,8 +1015,8 @@ class BrowserActivity : AppCompatActivity() {
         val input = EditText(this).apply {
             hint = "Pega un enlace (YouTube, TikTok, X…)"
             inputType = InputType.TYPE_TEXT_VARIATION_URI
-            setTextColor(theme.text)
-            setHintTextColor(theme.muted)
+            setTextColor(AppStyle.TEXT)
+            setHintTextColor(AppStyle.MUTED)
         }
         val contenedor = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1064,13 +1051,19 @@ class BrowserActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val q = YtDlpExtractor.listQualities(this@BrowserActivity, l)
+                // DLNA solo reproduce MP4 directo.
+                val options = if (UniversalCast.activeTarget() is DlnaCastTarget) {
+                    q.options.filter { it.fmt == "mp4" }.ifEmpty { q.options }
+                } else {
+                    q.options
+                }
                 val video = DetectedVideo(
                     key = groupKeyFor(l),
                     title = q.title,
                     sources = linkedSetOf(l),
-                    qualities = q.options.sortedBy { it.height },
+                    qualities = options.sortedBy { it.height },
                     resolved = true,
-                    selectedHeight = q.options.maxByOrNull { it.height }?.height,
+                    selectedHeight = options.maxByOrNull { it.height }?.height,
                     expanded = true,
                     selected = true,
                     hasRealTitle = true
@@ -1127,10 +1120,21 @@ class BrowserActivity : AppCompatActivity() {
         binding.webView.onPause()
     }
 
-    /** Transmite ESE video en la calidad elegida en la hoja. */
+    /** Transmite ESE video en la calidad elegida en la hoja, a la
+     *  tele vinculada (Roku, Chromecast o DLNA). */
     private fun transmitirVideo(video: DetectedVideo) {
-        val c = client ?: return
-        val opt = YtDlpExtractor.pickOption(video.qualities, video.selectedHeight) ?: run {
+        val target = UniversalCast.activeTarget() ?: run {
+            Toast.makeText(this, "Primero conecta una tele.", Toast.LENGTH_SHORT)
+                .show()
+            return
+        }
+        // DLNA solo reproduce MP4 directo.
+        val opt = if (target is DlnaCastTarget) {
+            video.qualities.firstOrNull { it.fmt == "mp4" }
+                ?: YtDlpExtractor.pickOption(video.qualities, video.selectedHeight)
+        } else {
+            YtDlpExtractor.pickOption(video.qualities, video.selectedHeight)
+        } ?: run {
             Toast.makeText(this, "Todavía no hay video para transmitir.", Toast.LENGTH_SHORT)
                 .show()
             return
@@ -1138,15 +1142,20 @@ class BrowserActivity : AppCompatActivity() {
         hojaVideos?.dismiss()
         pausarVideoDelTelefono()
         castActive = true
+        isPlayingNow = true
+        currentTitle = tituloPara(video)
+        binding.tvPlayerTitle.text = currentTitle
         binding.castBar.visibility = View.VISIBLE
         binding.tvCastBarStatus.text = "Mandando video a la tele…"
         binding.seekCast.max = 0
         binding.seekCast.progress = 0
         binding.tvCastTime.text = "0:00 / 0:00"
+        binding.btnPlayerPlay.setImageResource(R.drawable.ic_pause)
+        updateSpeedButton()
         lifecycleScope.launch {
-            val res = CastHelper.castUrl(
-                this@BrowserActivity, c, opt.url, tituloPara(video),
-                "video", opt.fmt, headers = videoHeaders()
+            val res = UniversalCast.castVideo(
+                this@BrowserActivity, opt.url, tituloPara(video),
+                opt.fmt, headers = videoHeaders()
             )
             binding.tvCastBarStatus.text = res.message
             if (!res.ok) {
@@ -1162,26 +1171,39 @@ class BrowserActivity : AppCompatActivity() {
 
     private fun comandoReceptor(cmd: String) {
         lifecycleScope.launch {
-            val res = CastHelper.receiverCommand(cmd)
+            val res = UniversalCast.command(cmd)
             if (binding.castBar.visibility == View.VISIBLE) {
                 binding.tvCastBarStatus.text = res.message
             }
             if (!res.ok) {
                 Toast.makeText(this@BrowserActivity, res.message, Toast.LENGTH_LONG).show()
             }
-            if (cmd == "stop" && res.ok) {
-                castActive = false
-                binding.castBar.visibility = View.GONE
-                detenerSondeoPosicion()
+            when (cmd) {
+                "pause" -> if (res.ok) {
+                    isPlayingNow = false
+                    binding.btnPlayerPlay.setImageResource(R.drawable.ic_play)
+                    updateDialogPlayIcon()
+                }
+                "resume" -> if (res.ok) {
+                    isPlayingNow = true
+                    binding.btnPlayerPlay.setImageResource(R.drawable.ic_pause)
+                    updateDialogPlayIcon()
+                }
+                "stop" -> if (res.ok) {
+                    castActive = false
+                    isPlayingNow = false
+                    binding.castBar.visibility = View.GONE
+                    detenerSondeoPosicion()
+                    playerDialog?.dismiss()
+                }
             }
         }
     }
 
-    /** Salto de ±10 s en lo que se transmite (positionSet del canal,
-     *  con respaldo ECP Fwd/Rew). */
+    /** Salto de ±10 s en lo que se transmite (cualquier protocolo). */
     private fun saltar(deltaSegundos: Int) {
         lifecycleScope.launch {
-            val res = CastHelper.receiverSeek(client, deltaSegundos)
+            val res = UniversalCast.seekBy(deltaSegundos)
             if (binding.castBar.visibility == View.VISIBLE) {
                 binding.tvCastBarStatus.text = res.message
             }
@@ -1191,17 +1213,201 @@ class BrowserActivity : AppCompatActivity() {
         }
     }
 
-    /** Sondea la posición cada 5 s para la barra de progreso. */
+    /** Sondea la posición cada 5 s para la barra de progreso
+     *  (funciona en los 3 protocolos: Roku, Chromecast y DLNA). */
     private fun iniciarSondeoPosicion() {
         detenerSondeoPosicion()
         positionJob = lifecycleScope.launch {
             while (isActive) {
                 delay(5000)
-                try {
-                    CastSession.receiver?.positionGet()
+                val state = try {
+                    UniversalCast.playbackState()
                 } catch (e: Exception) {
+                    null
+                }
+                if (state != null && state.durationSec > 0) {
+                    val pos = state.positionSec
+                    val dur = state.durationSec
+                    val time = "${CastHelper.fmtTime(pos)} / ${CastHelper.fmtTime(dur)}"
+                    if (!seeking) {
+                        binding.seekCast.max = dur.toInt()
+                        binding.seekCast.progress = pos.toInt().coerceIn(0, dur.toInt())
+                    }
+                    binding.tvCastTime.text = time
+                    if (!dialogSeeking) {
+                        dlgSeek?.let {
+                            it.max = dur.toInt()
+                            it.progress = pos.toInt().coerceIn(0, dur.toInt())
+                        }
+                    }
+                    dlgTime?.text = time
+                    if (state.playing != isPlayingNow) {
+                        isPlayingNow = state.playing
+                        binding.btnPlayerPlay.setImageResource(
+                            if (isPlayingNow) R.drawable.ic_pause else R.drawable.ic_play
+                        )
+                        updateDialogPlayIcon()
+                    }
                 }
             }
+        }
+    }
+
+    // ---------- Reproductor nuevo (v1.1.0) ----------
+
+    /** Play/pausa del reproductor (un solo botón grande). */
+    private fun togglePlayPause() {
+        comandoReceptor(if (isPlayingNow) "pause" else "resume")
+    }
+
+    /** Velocidad: 1× → 1.25× → 1.5× → 2× → 0.5× → 1×.
+     *  Solo Chromecast la soporta; en Roku/DLNA el botón va
+     *  apagado y no hace nada. */
+    private fun cycleSpeed() {
+        if (!UniversalCast.supportsSpeed()) {
+            Toast.makeText(
+                this,
+                "Esta tele no permite cambiar la velocidad.",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        val speeds = listOf(1.0f, 1.25f, 1.5f, 2.0f, 0.5f)
+        val next = speeds[(speeds.indexOf(currentSpeed) + 1) % speeds.size]
+        currentSpeed = next
+        updateSpeedButton()
+        lifecycleScope.launch {
+            val res = UniversalCast.setSpeed(next)
+            if (!res.ok) {
+                Toast.makeText(this@BrowserActivity, res.message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun updateSpeedButton() {
+        val supported = UniversalCast.supportsSpeed()
+        val label = when (currentSpeed) {
+            1.25f -> "1.25×"
+            1.5f -> "1.5×"
+            2.0f -> "2×"
+            0.5f -> "0.5×"
+            else -> "1×"
+        }
+        binding.btnCastVelocidad.text = label
+        binding.btnCastVelocidad.alpha = if (supported) 1.0f else 0.4f
+        dlgSpeed?.text = label
+        dlgSpeed?.alpha = if (supported) 1.0f else 0.4f
+    }
+
+    private fun updateDialogPlayIcon() {
+        dlgPlay?.setImageResource(
+            if (isPlayingNow) R.drawable.ic_pause else R.drawable.ic_play
+        )
+    }
+
+    /** Pantalla completa: el mismo reproductor en un diálogo grande,
+     *  con su propia barra arrastrable sincronizada con el sondeo. */
+    private fun showPlayerDialog() {
+        if (!castActive) {
+            Toast.makeText(this, "Nada transmitiendo ahora.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val view = layoutInflater.inflate(R.layout.dialog_player, null)
+        val title = view.findViewById<TextView>(R.id.dlgPlayerTitle)
+        val status = view.findViewById<TextView>(R.id.dlgPlayerStatus)
+        val seek = view.findViewById<SeekBar>(R.id.dlgSeek)
+        val time = view.findViewById<TextView>(R.id.dlgTime)
+        val btnBack = view.findViewById<Button>(R.id.btnDlgBack)
+        val btnPlay = view.findViewById<ImageButton>(R.id.btnDlgPlay)
+        val btnFwd = view.findViewById<Button>(R.id.btnDlgFwd)
+        val btnSpeed = view.findViewById<Button>(R.id.btnDlgSpeed)
+        val btnStop = view.findViewById<Button>(R.id.btnDlgStop)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnDlgCerrar)
+        title.text = currentTitle
+        status.text = binding.tvCastBarStatus.text
+        time.text = binding.tvCastTime.text
+        seek.max = binding.seekCast.max
+        seek.progress = binding.seekCast.progress
+        seek.progressTintList = ColorStateList.valueOf(AppStyle.PINK)
+        seek.thumbTintList = ColorStateList.valueOf(AppStyle.PINK)
+        btnPlay.setImageResource(
+            if (isPlayingNow) R.drawable.ic_pause else R.drawable.ic_play
+        )
+        btnSpeed.text = binding.btnCastVelocidad.text
+        btnSpeed.alpha = binding.btnCastVelocidad.alpha
+        dlgSeek = seek
+        dlgTime = time
+        dlgStatus = status
+        dlgPlay = btnPlay
+        dlgSpeed = btnSpeed
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    time.text = "${CastHelper.fmtTime(p.toDouble())} / " +
+                        CastHelper.fmtTime(seek.max.toDouble())
+                }
+            }
+
+            override fun onStartTrackingTouch(s: SeekBar?) {
+                dialogSeeking = true
+            }
+
+            override fun onStopTrackingTouch(s: SeekBar?) {
+                dialogSeeking = false
+                val pos = s?.progress ?: return
+                lifecycleScope.launch { UniversalCast.seekTo(pos) }
+            }
+        })
+        btnBack.setOnClickListener { saltar(-10) }
+        btnFwd.setOnClickListener { saltar(10) }
+        btnPlay.setOnClickListener { togglePlayPause() }
+        btnSpeed.setOnClickListener { cycleSpeed() }
+        btnStop.setOnClickListener { comandoReceptor("stop") }
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+        btnClose.setOnClickListener { dialog.dismiss() }
+        dialog.setOnDismissListener {
+            playerDialog = null
+            dlgSeek = null
+            dlgTime = null
+            dlgStatus = null
+            dlgPlay = null
+            dlgSpeed = null
+        }
+        playerDialog = dialog
+        dialog.show()
+    }
+
+    /** Hoja para elegir a qué tele transmitir (Roku, Chromecast o
+     *  DLNA). Al elegir, esa tele queda vinculada y guardada. */
+    private fun abrirSelectorDestinos() {
+        Toast.makeText(this, "Buscando teles…", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val targets = DeviceDiscovery.discoverAll(this@BrowserActivity)
+            DestinationPicker.show(
+                this@BrowserActivity, targets,
+                onPick = { target ->
+                    CastSession.activeTarget = target
+                    TargetStore.save(this@BrowserActivity, target)
+                    if (target is RokuCastTarget) {
+                        CastSession.rokuIp = target.ip
+                        CastSession.rokuName = target.name
+                        client = RokuClient(target.ip)
+                    } else {
+                        client = null
+                    }
+                    binding.tvNavTv.text = target.protocol
+                    binding.dotConexion.visibility = View.VISIBLE
+                    updateSpeedButton()
+                    Toast.makeText(
+                        this@BrowserActivity,
+                        "Tele vinculada: ${target.name} (${target.protocol}).",
+                        Toast.LENGTH_LONG
+                    ).show()
+                },
+                onSearch = { abrirSelectorDestinos() }
+            )
         }
     }
 

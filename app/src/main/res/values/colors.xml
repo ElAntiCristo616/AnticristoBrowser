@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Paleta fija v1.1.0 (sin temas): look de la referencia
+         (Behance "Movie Mobile App"): fondo oscuro con brillo neón
+         rosa/teal, tarjetas oscuras, texto blanco. -->
+    <color name="neo_bg_top">#160A24</color>
+    <color name="neo_bg_bottom">#05060A</color>
+    <color name="neo_surface">#1D1D2B</color>
+    <color name="neo_surface_light">#2A2A3D</color>
+    <color name="neo_border">#2E2E42</color>
+    <color name="neo_pink">#FF2E88</color>
+    <color name="neo_teal">#00E5C7</color>
+    <color name="neo_text">#FFFFFF</color>
+    <color name="neo_muted">#9A9AB0</color>
+    <color name="neo_gold">#FFC107</color>
+    <color name="neo_ink">#1A1A1A</color>
+    <color name="neo_hint">#8A8A8A</color>
+
+    <!-- Nombres viejos (se conservan por compatibilidad). -->
     <color name="pine_dark">#04140E</color>
     <color name="pine">#0E3426</color>
     <color name="pine_light">#1A4A33</color>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bottom sheet de videos detectados (v1.0.3): la lista se arma
-     por código, un renglón por video; cada video se despliega para
-     ver SUS calidades y transmitir ESE video. -->
+<!-- Bottom sheet de videos detectados (v1.1.0): look fijo neón.
+     La lista se arma por código, un renglón por video; cada video se
+     despliega para ver SUS calidades y transmitir ESE video. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -16,7 +16,7 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="10dp"
-        android:background="@drawable/bg_red_pill" />
+        android:background="@drawable/bg_gradient_button" />
 
     <TextView
         android:id="@+id/sheetTitle"
@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:text="Videos en esta página"
-        android:textColor="@color/snow_white"
+        android:textColor="@color/neo_text"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -34,7 +34,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="Toca un video para ver sus calidades y transmitirlo a la tele."
-        android:textColor="@color/sage"
+        android:textColor="@color/neo_muted"
         android:textSize="13sp" />
 
     <ScrollView
@@ -54,7 +54,7 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginTop="12dp"
-        android:backgroundTint="@color/pine_light"
+        android:backgroundTint="@color/neo_surface_light"
         android:text="Cerrar"
-        android:textColor="@color/snow_white" />
+        android:textColor="@color/neo_text" />
 </LinearLayout>

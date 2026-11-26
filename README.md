@@ -39,37 +39,59 @@ videos a la tele por el canal receptor «Web Video Caster - Receiver»
 - **Conectar a la tele**: descubrimiento por SSDP o IP manual
   (la IP se ve en la tele en Ajustes → Red → Acerca de); la IP se
   guarda y se usa primero la próxima vez.
-- **Controles del reproductor al transmitir (v1.0.4)**: la barrita de
-  transmisión trae Pausa / Seguir / Parar, saltos de −10 s y +10 s y
-  barra de progreso con el tiempo. Los saltos usan el protocolo del
-  canal receptor (positionSet, exacto) con respaldo por teclas ECP
-  Fwd/Rew; la posición llega por los eventos del canal y se sondea
-  cada 5 s. Solo se puede probar en la tele real.
-- **Detección de video agrupada (v1.0.4)**: cada video es UNA tarjeta
-  en la hoja (sus variantes hls.m3u8, hls-360p, hls-480p, hls-720p y
-  mp4 se fusionan), con miniatura del póster, duración y sus calidades
-  dentro. El video principal (el reproductor más grande/visible) va
-  primero con insignia dorada «Video principal». La tarjeta elegida
-  queda marcada con borde dorado y ✓, y la calidad elegida con radio
-  lleno y fondo resaltado. Filtro de anuncios reforzado (más
-  marcadores de URL, contenedores de anuncios, videos ocultos y
-  videos de menos de 10 s fuera).
-- **Iconos de marca rehechos (v1.0.4)**: los 5 accesos rápidos con los
-  logos oficiales vectoriales (YouTube: play blanco sobre rojo;
-  TikTok: nota con cian/magenta sobre negro; Instagram: cámara sobre
-  el degradado oficial; X: X blanca sobre negro; Facebook: f blanca
-  sobre azul).
-- **TikTok arreglado (v1.0.4)**: user-agent de Chrome móvil real (sin
-  «wv»), cookies de terceros aceptadas, entrada por www.tiktok.com y
-  manejo de enlaces tiktok:// o intent://.
-- **Temas (v1.0.4)**: 13 temas (Navidad, Sakura, Invierno, Océano,
-  Galaxia, Bosque, Fuego, Atardecer, Neón, Otoño, Dulce, Lluvia y
-  Claro) con paleta completa y partículas propias por tema (nieve,
-  pétalos rosa, hojas, burbujas, brasas, lluvia, estrellas,
-  corazones, destellos, polvo dorado o ninguna), guardados y
-  aplicables al portal, a la puerta y al navegador. Selector en el
-  botón «Tema» del portal y en el menú ⋮ del navegador.
+## Novedades v1.1.0 — transmisión universal + lobby nuevo
+
+- **Transmisión universal**: Roku (ECP/DIAL/WVC como siempre) +
+  **Chromecast / Google Cast** (SDK oficial, receptor por defecto:
+  URLs directas MP4/HLS/DASH, play/pausa/seek/velocidad) +
+  **DLNA/UPnP** (descubrimiento SSDP + SOAP AVTransport: play/pausa/
+  stop/seek; solo MP4 directo). La hoja «¿A qué tele lo mando?»
+  lista las teles del Wi-Fi con su protocolo; la vinculada se
+  recuerda por protocolo. Todo exige el mismo Wi-Fi.
+- **Lobby nuevo** (look de la referencia Behance "Movie Mobile App",
+  solo el look: no es una réplica, sin onboarding VR, sin «Sign up»,
+  sin pósters ni datos falsos de pelis): saludo grande, campo para
+  pegar el link + botón «Transmitir», **Favoritos** (sitios guardados
+  con su icono oficial; tocar transmite, mantener quita) e
+  **Historial** (links con fecha/hora; tocar reabre, ✕ borra,
+  «Limpiar» borra todo). Cero accesos directos fijos. Navegación
+  inferior: Inicio / Navegador / + central / Favoritos / Historial.
+- **Sin temas ni personalización**: el sistema de 13 temas, el
+  selector y las partículas se quitaron por completo. Un solo look
+  fijo: el de la referencia.
+- **Selector de video: anuncios bloqueados**: AdFilter filtra URLs
+  de publicidad (redes de ads, VAST, preroll/midroll, patrocinados),
+  contenedores de anuncios y títulos de anuncio. Una tarjeta por
+  video, principal primero con ★.
+- **Reproductor nuevo**: barra de progreso arrastrable con el dedo
+  (seek libre), tiempo actual/total, play/pausa grande, −10 s/+10 s,
+  velocidad 0.5×–2× (solo Chromecast; en Roku/DLNA el botón va
+  apagado) y pantalla completa (diálogo grande con su propia barra).
+  Funciona en los 3 protocolos; la posición se sondea cada 5 s.
+- YouTube en Roku sigue por DIAL (app de YouTube en la tele). En
+  Chromecast YouTube se manda como URL directa de yt-dlp al receptor
+  por defecto (a propósito: por DIAL la app de YouTube no la puede
+  controlar nuestra app y el reproductor quedaría inútil).
 - Tema navideño (verde pino, rojo, guirnalda y nieve), todo en español.
+
+## Lo que ya tenía (v1.0.4, sigue igual)
+
+- **Detección de video agrupada**: cada video es UNA tarjeta en la
+  hoja (sus variantes hls.m3u8, hls-360p, hls-480p, hls-720p y mp4
+  se fusionan), con miniatura del póster, duración y sus calidades
+  dentro. El video principal va primero con insignia dorada «Video
+  principal». La tarjeta elegida queda marcada con borde dorado y ✓,
+  y la calidad elegida con radio lleno y fondo resaltado.
+- **Iconos de marca**: logos oficiales vectoriales (YouTube, TikTok,
+  Instagram, X, Facebook) en favoritos y en la hoja de videos.
+- **TikTok arreglado**: user-agent de Chrome móvil real (sin «wv»),
+  cookies de terceros aceptadas, entrada por www.tiktok.com y manejo
+  de enlaces tiktok:// o intent://.
+- **Controles del reproductor (v1.0.4)**: la barrita traía Pausa /
+  Seguir / Parar, saltos de −10 s y +10 s y barra de progreso. Los
+  saltos usan el protocolo del canal receptor (positionSet, exacto)
+  con respaldo por teclas ECP Fwd/Rew. En v1.1.0 el reproductor se
+  rehízo (ver arriba).
 
 ## Para transmitir necesitas
 
