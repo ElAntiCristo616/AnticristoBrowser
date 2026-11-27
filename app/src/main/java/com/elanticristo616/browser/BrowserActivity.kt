@@ -97,6 +97,17 @@ import java.net.URL
  *    detector acepta las URLs estilo KVS (.../video_720p.mp4/ con
  *    barra final, ?file=...mp4&...). El listener anti-trampa del play
  *    se instala una sola vez por carga.
+ *  - v1.1.7: el video puede vivir dentro de un iframe cross-origin
+ *    (ScatGold, pestaña «Standard») con su manifiesto HLS en una URL
+ *    SIN extensión (.../play/MASTER/<uuid>/<token>): el interceptor
+ *    reconoce esas maestras como video, el escaneo cuenta los
+ *    iframes con pinta de video para no decir «no hay video» cuando
+ *    el video está sonando en un marco, el flujo del interceptor se
+ *    marca como principal cuando el escaneo no ve <video>, y el
+ *    formato que se manda a la tele es «hls» (el receptor recibe el
+ *    fmt explícito, no tiene que adivinarlo por la extensión). El
+ *    timeout del botón de transmitir subió de 1.5 s a 3 s y usa lo
+ *    que vio el último escaneo.
  */
 class BrowserActivity : AppCompatActivity() {
 
@@ -165,6 +176,15 @@ class BrowserActivity : AppCompatActivity() {
     /** Todos los videos reales de la página, en orden de aparición,
      *  ya agrupados por video (clave = URL normalizada). */
     private val detectedVideos = LinkedHashMap<String, DetectedVideo>()
+
+    /** Lo que vio el último escaneo de la página: nº de <video> en
+     *  el documento principal e iframes con pinta de video. En
+     *  páginas como ScatGold el video vive dentro de un iframe
+     *  cross-origin (0 <video> en el documento principal): sin
+     *  recordar esto, el botón de transmitir diría «no hay video»
+     *  aunque el video esté sonando. Se actualiza en cada escaneo. */
+    private var lastScanVideosEnPagina: Int = 0
+    private var lastScanIframesVideo: Int = 0
 
     /** Hoja de videos (bottom sheet) y su contenido actual. */
     private var hojaVideos: BottomSheetDialog? = null
@@ -407,6 +427,11 @@ class BrowserActivity : AppCompatActivity() {
                 ) {
                     // Página nueva: se descartan los videos de la anterior.
                     detectedVideos.clear()
+                    // v1.1.7: también se descarta lo que vio el último
+                    // escaneo, para que el botón de transmitir no
+                    // use el estado de la página anterior.
+                    lastScanVideosEnPagina = 0
+                    lastScanIframesVideo = 0
                     updatePill()
                     hojaVideos?.dismiss()
                 }
@@ -574,8 +599,19 @@ class BrowserActivity : AppCompatActivity() {
     private fun groupKeyFor(rawUrl: String): String {
         val lower = rawUrl.lowercase().substringBefore('?').substringBefore('#')
         val segs = lower.split('/').filter { it.isNotEmpty() && it != "." && it != ".." }
-        val pathSegs = segs.drop(2) // esquema + host
-        if (pathSegs.isEmpty()) return lower
+        val pathSegsCrudos = segs.drop(2) // esquema + host
+        if (pathSegsCrudos.isEmpty()) return lower
+        // v1.1.7: la maestra HLS sin extensión lleva un token que
+        // cambia por carga (.../play/MASTER/<uuid>/<token>): sin
+        // cortar ahí, cada petición del mismo video abriría un
+        // grupo distinto. Se corta tras el uuid (el segmento que
+        // sigue a MASTER): la clave queda estable por video.
+        val masterIdx = pathSegsCrudos.indexOfFirst { it == "master" }
+        val pathSegs = if (masterIdx >= 0) {
+            pathSegsCrudos.take(minOf(masterIdx + 2, pathSegsCrudos.size))
+        } else {
+            pathSegsCrudos
+        }
         val genericFiles = setOf(
             "hls", "master", "playlist", "index", "video", "media",
             "file", "chunklist", "chunks"
@@ -610,7 +646,20 @@ class BrowserActivity : AppCompatActivity() {
     }
 
     private fun onDirectVideoFound(url: String) {
-        groupFor(url)
+        val group = groupFor(url)
+        // v1.1.7: si el escaneo no vio ningún <video> en el
+        // documento principal, el video vive en un iframe y este
+        // flujo del interceptor ES el video principal: se marca
+        // para que la hoja le ponga el título de la página y la
+        // insignia dorada en vez de mostrar la URL cruda. Si el
+        // escaneo sí ve el reproductor, es él quien marca el
+        // principal (y su lógica de «solo un principal» corrige
+        // este marcado si el grupo no era el del reproductor).
+        if (lastScanVideosEnPagina == 0 &&
+            detectedVideos.values.none { it.isMain }
+        ) {
+            group.isMain = true
+        }
         updatePill()
     }
 
@@ -629,8 +678,29 @@ class BrowserActivity : AppCompatActivity() {
 
     /** Resultado del escaneo: cuántos <video> hay en la página,
      *  aunque no traigan URL directa (para distinguir «no hay
-     *  video» de «hay video pero no se pudo detectar su enlace»). */
-    private data class ScanResult(val videosEnPagina: Int)
+     *  video» de «hay video pero no se pudo detectar su enlace»),
+     *  y cuántos iframes con pinta de video hay (v1.1.7: en
+     *  páginas como ScatGold el reproductor vive dentro de un
+     *  iframe cross-origin y el escaneo ve 0 <video>, pero el
+     *  iframe SÍ es el video). */
+    private data class ScanResult(val videosEnPagina: Int, val iframesVideo: Int = 0)
+
+    /** Iframes de la página que huelen a video: su src no está en
+     *  la lista de bloqueo ni huele a anuncio. Un iframe de anuncio
+     *  no cuenta: no es el video que el usuario quiere transmitir. */
+    private fun contarIframesVideo(root: JSONObject): Int {
+        val arr = root.optJSONArray("iframes") ?: return 0
+        var n = 0
+        for (i in 0 until arr.length()) {
+            val src = arr.optString(i, "").trim()
+            if (src.isBlank()) continue
+            val host = Blocklist.hostOf(src) ?: continue
+            if (Blocklist.isBlockedHost(host)) continue
+            if (AdFilter.isAdUrl(src)) continue
+            n++
+        }
+        return n
+    }
 
     /** Busca los <video> de la página y los agrupa. El video
      *  PRINCIPAL es el visible más grande (el reproductor); si
@@ -664,11 +734,20 @@ class BrowserActivity : AppCompatActivity() {
             "el.querySelectorAll('source').forEach(function(s){if(s.src)srcs.push(s.src);});" +
             "out.push({srcs:srcs,ad:esAnuncio(el),dur:dur,poster:el.poster||'',w:r.w,h:r.h,vis:vis});" +
             "});" +
-            "return {total:document.querySelectorAll('video').length,items:out};})()"
+            // v1.1.7: los iframes de la página (el reproductor puede
+            // vivir dentro de uno, invisible para querySelectorAll
+            // ('video') del documento principal). Se devuelven sus
+            // src para contar en Kotlin cuáles huelen a video.
+            "var frs=[];" +
+            "document.querySelectorAll('iframe').forEach(function(f){if(f.src)frs.push(f.src);});" +
+            "return {total:document.querySelectorAll('video').length,items:out,iframes:frs};})()"
         binding.webView.evaluateJavascript(js) { result ->
             try {
                 val root = JSONObject(result)
                 val total = root.optInt("total", 0)
+                val iframesVideo = contarIframesVideo(root)
+                lastScanVideosEnPagina = total
+                lastScanIframesVideo = iframesVideo
                 val arr = root.optJSONArray("items") ?: JSONArray()
                 val elements = mutableListOf<VideoElement>()
                 for (i in 0 until arr.length()) {
@@ -699,7 +778,7 @@ class BrowserActivity : AppCompatActivity() {
                     )
                 }
                 if (elements.isEmpty()) {
-                    onDone?.invoke(ScanResult(total))
+                    onDone?.invoke(ScanResult(total, iframesVideo))
                     return@evaluateJavascript
                 }
                 val pool = elements.filter { it.vis }.ifEmpty { elements }
@@ -740,10 +819,12 @@ class BrowserActivity : AppCompatActivity() {
                     mains.forEach { if (it !== keep) it.isMain = false }
                 }
                 if (cambio) updatePill()
-                onDone?.invoke(ScanResult(total))
+                onDone?.invoke(ScanResult(total, iframesVideo))
             } catch (e: Exception) {
                 // La página no trajo videos directos: nada que mostrar
-                onDone?.invoke(ScanResult(0))
+                lastScanVideosEnPagina = 0
+                lastScanIframesVideo = 0
+                onDone?.invoke(ScanResult(0, 0))
             }
         }
     }
@@ -781,7 +862,12 @@ class BrowserActivity : AppCompatActivity() {
             resuelto = true
             if (detectedVideos.isNotEmpty()) {
                 abrirHojaVideos()
-            } else if (res.videosEnPagina > 0) {
+            } else if (res.videosEnPagina > 0 || res.iframesVideo > 0) {
+                // v1.1.7: el video puede vivir dentro de un iframe
+                // (0 <video> en el documento principal): no es «no
+                // hay video», es «hay video pero su enlace aún no
+                // se detectó». Al darle play, la petición del flujo
+                // pasa por el interceptor y entonces sí aparece.
                 Toast.makeText(
                     this,
                     "Hay un video en la página pero no se pudo detectar " +
@@ -797,14 +883,25 @@ class BrowserActivity : AppCompatActivity() {
                 ).show()
             }
         }
-        // Seguridad: si el escaneo no responde en ~1.5 s, avisa
-        // igual (evaluateJavascript puede fallar en silencio).
+        // Seguridad: si el escaneo no responde en ~3 s, avisa igual
+        // (evaluateJavascript puede fallar en silencio). v1.1.7: el
+        // aviso usa lo que vio el ÚLTIMO escaneo (videos o iframes
+        // de video): en páginas pesadas el re-escaneo puede tardar
+        // más de lo previsto y el «no hay video» mentía aunque el
+        // video estuviera sonando dentro de un iframe.
         lifecycleScope.launch {
-            delay(1500)
+            delay(3000)
             if (!resuelto) {
                 resuelto = true
                 if (detectedVideos.isNotEmpty()) {
                     abrirHojaVideos()
+                } else if (lastScanVideosEnPagina > 0 || lastScanIframesVideo > 0) {
+                    Toast.makeText(
+                        this@BrowserActivity,
+                        "Hay un video en la página pero no se pudo detectar " +
+                            "su enlace. Dale play al video y vuelve a intentarlo.",
+                        Toast.LENGTH_LONG
+                    ).show()
                 } else {
                     Toast.makeText(
                         this@BrowserActivity,
@@ -1108,8 +1205,15 @@ class BrowserActivity : AppCompatActivity() {
      *  fuente (mp4…) es una calidad por su altura inferida. Sin
      *  duplicados por altura y de menor a mayor. */
     private fun resolverCalidades(video: DetectedVideo, alListo: () -> Unit) {
+        // v1.1.7: la maestra HLS sin extensión (.../play/MASTER/...)
+        // también es maestra: se lee su manifiesto igual que una
+        // .m3u8. Si el manifiesto no se puede leer (p. ej. el CDN
+        // rechaza la petición directa de la app), se ofrece la
+        // maestra tal cual como una sola calidad «Video»: la tele
+        // la baja con sus propios headers y suele poder con ella.
         val hlsMaster = video.sources.firstOrNull {
-            it.lowercase().contains(".m3u8")
+            val l = it.lowercase()
+            l.contains(".m3u8") || Blocklist.isHlsMasterUrl(it)
         }
         val cookie = try {
             CookieManager.getInstance().getCookie(video.url)
@@ -1250,7 +1354,10 @@ class BrowserActivity : AppCompatActivity() {
     private fun fmtFor(url: String): String {
         val lower = url.lowercase()
         return when {
-            lower.contains(".m3u8") -> "hls"
+            // v1.1.7: la maestra HLS sin extensión también es HLS
+            // (si no, se mandaría a la tele como "mp4" y el receptor
+            // no sabría qué hacer con ella).
+            lower.contains(".m3u8") || Blocklist.isHlsMasterUrl(url) -> "hls"
             lower.contains(".mpd") -> "dash"
             lower.contains(".mp3") -> "mp3"
             else -> "mp4"

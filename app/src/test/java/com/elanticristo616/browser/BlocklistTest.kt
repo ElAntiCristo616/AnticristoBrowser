@@ -260,6 +260,64 @@ class BlocklistTest {
     }
 
     @Test
+    fun `las listas maestras HLS sin extension se detectan como video`() {
+        // v1.1.7: ScatGold, pestaña «Standard»: el video vive en un
+        // iframe (zone11.smear.cloud) y su manifiesto maestro es
+        // https://zone11.smear.cloud/play/MASTER/<uuid>/<token> —
+        // SIN .m3u8. Sin esta regla el interceptor no la registra y
+        // el selector queda vacío aunque el video suene.
+        val maestraReal =
+            "https://zone11.smear.cloud/play/MASTER/c400d031-a9cb-4d5f-8217-36fffc169605/K-567YeoRFhWgu85-UurWwq-uAhMDODMmqyhuT0aO9s"
+        val maestras = listOf(
+            maestraReal,
+            "https://zone11.smear.cloud/play/MASTER/11111111-2222-3333-4444-555555555555/OtroToken-abc123",
+            "https://cdn.example.com/hls/master/abc123",
+            "https://cdn.example.com/play/master",
+            "https://cdn.example.com/stream/master/xyz",
+            "https://cdn.example.com/video/master/xyz"
+        )
+        for (u in maestras) {
+            assertTrue("es maestra HLS: $u", Blocklist.isHlsMasterUrl(u))
+            assertTrue("es video directo: $u", Blocklist.isVideoFileUrl(u))
+            assertTrue("es medio: $u", Blocklist.isMediaUrl(u))
+            assertFalse(
+                "la maestra HLS no se bloquea: $u",
+                Blocklist.shouldBlockRequest(u, false)
+            )
+            assertFalse(
+                "la navegación a la maestra no se veta: $u",
+                Blocklist.shouldVetoNavigation(u, "scat.gold")
+            )
+        }
+        // La maestra real no huele a anuncio: el interceptor la
+        // registra (el filtro de anuncios no la descarta).
+        assertFalse(AdFilter.isAdUrl(maestraReal))
+        // Un «/master» suelto NO es un manifiesto: una página o un
+        // API con ese nombre no se ofrece como video.
+        val noMaestras = listOf(
+            "https://example.com/master",
+            "https://example.com/api/master/list",
+            "https://example.com/videos/master-class",
+            "https://example.com/play/masterclass/leccion-1",
+            "https://example.com/hls/playlist.m3u8?x=1"
+        )
+        for (u in noMaestras) {
+            assertFalse("no es maestra HLS: $u", Blocklist.isHlsMasterUrl(u))
+        }
+        // La .m3u8 con extensión sigue siendo video por su forma,
+        // aunque no sea «maestra» por esta regla.
+        assertTrue(
+            Blocklist.isVideoFileUrl("https://example.com/hls/playlist.m3u8?x=1")
+        )
+        // Una maestra HLS en un host de anuncios sigue oliendo a
+        // anuncio: el interceptor la descarta por AdFilter aunque
+        // su forma sea de video (la forma no quita el filtro).
+        val maestraAnuncio = "https://ads.example.com/play/master/xyz"
+        assertTrue(Blocklist.isHlsMasterUrl(maestraAnuncio))
+        assertTrue(AdFilter.isAdUrl(maestraAnuncio))
+    }
+
+    @Test
     fun `los videos del cdn de la pagina no se bloquean ni se vetan`() {
         // v1.1.5: bkcdn.net es el CDN de video de la pagina: el
         // video principal puede vivir ahi. El arreglo del salto es

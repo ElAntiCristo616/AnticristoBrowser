@@ -101,7 +101,36 @@ object Blocklist {
         val lower = url.lowercase(Locale.ROOT)
         if (!lower.startsWith("http://") && !lower.startsWith("https://")) return false
         if (hasVideoExtension(lower, VIDEO_EXTENSIONS)) return true
+        // v1.1.7: lista maestra HLS SIN extensión (p. ej.
+        // .../play/MASTER/<uuid>/<token>): no trae .m3u8 pero ES
+        // el flujo del video; sin esto el intercept no la registra.
+        if (isHlsMasterUrl(lower)) return true
         return lower.contains("media=hls")
+    }
+
+    /**
+     * ¿La URL es una lista maestra HLS SIN extensión? Forma real de
+     * los embeds de video (v1.1.7, ScatGold pestaña «Standard»):
+     * https://zone11.smear.cloud/play/MASTER/<uuid>/<token> — el
+     * reproductor vive en un iframe y su manifiesto maestro no trae
+     * .m3u8, así que sin esta regla el video es invisible para el
+     * selector aunque la petición SÍ pase por el interceptor.
+     *
+     * Regla estrecha a propósito: la ruta debe llevar «master» Y
+     * una palabra de flujo (play/hls/stream/video/manifest/
+     * playlist). Un «/master» suelto (p. ej. /api/master/list)
+     * NO cuenta: sería una página o un API, no un manifiesto.
+     * El filtro de anuncios sigue aplicando aparte (isAdUrl): una
+     * maestra HLS que huela a anuncio no se ofrece como video.
+     */
+    internal fun isHlsMasterUrl(url: String): Boolean {
+        val lower = url.lowercase(Locale.ROOT)
+        val path = lower.substringBefore('?').substringBefore('#')
+        val esMaestra = path.contains("/master/") || path.endsWith("/master")
+        if (!esMaestra) return false
+        return path.contains("/play/") || path.contains("/hls/") ||
+            path.contains("/stream/") || path.contains("/video/") ||
+            path.contains("/manifest/") || path.contains("/playlist/")
     }
 
     @Volatile
@@ -161,6 +190,10 @@ object Blocklist {
     internal fun isMediaUrl(url: String): Boolean {
         val lower = url.lowercase(Locale.ROOT)
         if (hasVideoExtension(lower, MEDIA_EXTENSIONS)) return true
+        // v1.1.7: la maestra HLS sin extensión también es medio:
+        // si no, shouldBlockRequest podría bloquear la petición del
+        // manifiesto y el video ni sonaría.
+        if (isHlsMasterUrl(lower)) return true
         return lower.contains("media=hls")
     }
 
