@@ -41,6 +41,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -91,6 +92,11 @@ import java.net.URL
  *    que esconde botones falsos de play, overlays y contenedores de
  *    anuncios. El video principal, los hosts de video, el login y la
  *    red local (Cast/DLNA/Roku) no se tocan jamás.
+ *  - v1.1.6: el botón de transmitir re-escanea la página al tocarlo
+ *    (el reproductor puede poner el src tarde, al darle play) y el
+ *    detector acepta las URLs estilo KVS (.../video_720p.mp4/ con
+ *    barra final, ?file=...mp4&...). El listener anti-trampa del play
+ *    se instala una sola vez por carga.
  */
 class BrowserActivity : AppCompatActivity() {
 
@@ -195,26 +201,15 @@ class BrowserActivity : AppCompatActivity() {
         binding.etDireccion.setOnEditorActionListener { _, _, _ ->
             irA(binding.etDireccion.text.toString()); true
         }
-        binding.pillDetected.setOnClickListener { abrirHojaVideos() }
-        binding.btnPillTransmitir.setOnClickListener { abrirHojaVideos() }
+        binding.pillDetected.setOnClickListener { intentarTransmitir() }
+        binding.btnPillTransmitir.setOnClickListener { intentarTransmitir() }
         binding.btnNavAtras.setOnClickListener {
             if (binding.webView.canGoBack()) binding.webView.goBack() else finish()
         }
         binding.btnNavAdelante.setOnClickListener {
             if (binding.webView.canGoForward()) binding.webView.goForward()
         }
-        binding.btnNavTransmitir.setOnClickListener {
-            if (detectedVideos.isNotEmpty()) {
-                abrirHojaVideos()
-            } else {
-                Toast.makeText(
-                    this,
-                    "Conectado a ${UniversalCast.activeLabel()}: " +
-                        "no hay video en esta página.",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
+        binding.btnNavTransmitir.setOnClickListener { intentarTransmitir() }
         binding.btnNavMenu.setOnClickListener { mostrarMenu() }
         binding.btnCastParar.setOnClickListener { comandoReceptor("stop") }
         binding.btnCastDesconectar.setOnClickListener { desconectarTele() }
@@ -438,9 +433,16 @@ class BrowserActivity : AppCompatActivity() {
                         delay(1500)
                         if (!isFinishing) ocultarAnuncios()
                         if (!isFinishing) neutralizarTrampa()
+                        // v1.1.6: el reproductor puede poner el src
+                        // tarde (al darle play) o cambiarlo después
+                        // de cargar: se re-escanea con retraso, como
+                        // los anuncios, para no depender solo del
+                        // escaneo de carga.
+                        if (!isFinishing) scanPageForVideos()
                         delay(2500)
                         if (!isFinishing) ocultarAnuncios()
                         if (!isFinishing) neutralizarTrampa()
+                        if (!isFinishing) scanPageForVideos()
                     }
                     // Si se había pausado el WebView al transmitir, se
                     // reanuda al cargar otra página.
@@ -554,17 +556,12 @@ class BrowserActivity : AppCompatActivity() {
 
     // ---------- Detección de video (agrupada) ----------
 
-    /** ¿La URL apunta directo a un archivo o flujo de video? */
-    private fun isDirectVideoUrl(u: String): Boolean {
-        val lower = u.lowercase()
-        if (!lower.startsWith("http://") && !lower.startsWith("https://")) return false
-        val noQuery = lower.substringBefore('?').substringBefore('#')
-        return noQuery.endsWith(".mp4") || noQuery.endsWith(".m3u8") ||
-            noQuery.endsWith(".mpd") || noQuery.endsWith(".mov") ||
-            noQuery.endsWith(".mkv") || noQuery.endsWith(".webm") ||
-            lower.contains(".mp4?") || lower.contains(".m3u8") ||
-            lower.contains(".mpd?") || lower.contains("media=hls")
-    }
+    /** ¿La URL apunta directo a un archivo o flujo de video?
+     *  La forma la decide Blocklist: incluye las formas reales de
+     *  los reproductores (KVS: .../video_720p.mp4/ con barra final,
+     *  ?file=...mp4&...). */
+    private fun isDirectVideoUrl(u: String): Boolean =
+        Blocklist.isVideoFileUrl(u)
 
     /** Clave de grupo de una URL de video: quita la calidad
      *  (-360p, _720p…), el nombre de archivo genérico (hls.m3u8,
@@ -630,6 +627,11 @@ class BrowserActivity : AppCompatActivity() {
         val vis: Boolean
     )
 
+    /** Resultado del escaneo: cuántos <video> hay en la página,
+     *  aunque no traigan URL directa (para distinguir «no hay
+     *  video» de «hay video pero no se pudo detectar su enlace»). */
+    private data class ScanResult(val videosEnPagina: Int)
+
     /** Busca los <video> de la página y los agrupa. El video
      *  PRINCIPAL es el visible más grande (el reproductor); si
      *  ninguno se ve, el más grande. Un reproductor con src blob
@@ -638,8 +640,12 @@ class BrowserActivity : AppCompatActivity() {
      *  fuentes, que es el video real (los anuncios traen una sola).
      *  Fuera: anuncios (contenedor o URL), videos ocultos o de
      *  menos de 10 s, y URLs blob:/data: como entradas (no se
-     *  pueden transmitir). */
-    private fun scanPageForVideos() {
+     *  pueden transmitir).
+     *
+     *  v1.1.6: acepta un callback con el resultado (siempre se
+     *  llama, también si la página no trae videos o el JS falla),
+     *  para el re-escaneo bajo demanda del botón de transmitir. */
+    private fun scanPageForVideos(onDone: ((ScanResult) -> Unit)? = null) {
         // v1.1.4: la detección de anuncios vive en un solo sitio
         // (AdFilter.AD_CHECK_JS), con las señales del reproductor de
         // YouTube incluidas: cuando suena el pre-roll, el <video>
@@ -658,10 +664,12 @@ class BrowserActivity : AppCompatActivity() {
             "el.querySelectorAll('source').forEach(function(s){if(s.src)srcs.push(s.src);});" +
             "out.push({srcs:srcs,ad:esAnuncio(el),dur:dur,poster:el.poster||'',w:r.w,h:r.h,vis:vis});" +
             "});" +
-            "return out;})()"
+            "return {total:document.querySelectorAll('video').length,items:out};})()"
         binding.webView.evaluateJavascript(js) { result ->
             try {
-                val arr = JSONArray(result)
+                val root = JSONObject(result)
+                val total = root.optInt("total", 0)
+                val arr = root.optJSONArray("items") ?: JSONArray()
                 val elements = mutableListOf<VideoElement>()
                 for (i in 0 until arr.length()) {
                     val o = arr.optJSONObject(i) ?: continue
@@ -690,7 +698,10 @@ class BrowserActivity : AppCompatActivity() {
                         vis = o.optBoolean("vis", false)
                     )
                 }
-                if (elements.isEmpty()) return@evaluateJavascript
+                if (elements.isEmpty()) {
+                    onDone?.invoke(ScanResult(total))
+                    return@evaluateJavascript
+                }
                 val pool = elements.filter { it.vis }.ifEmpty { elements }
                 val mainEl = pool.maxByOrNull { it.w * it.h }
                 var cambio = false
@@ -729,8 +740,10 @@ class BrowserActivity : AppCompatActivity() {
                     mains.forEach { if (it !== keep) it.isMain = false }
                 }
                 if (cambio) updatePill()
+                onDone?.invoke(ScanResult(total))
             } catch (e: Exception) {
                 // La página no trajo videos directos: nada que mostrar
+                onDone?.invoke(ScanResult(0))
             }
         }
     }
@@ -748,6 +761,61 @@ class BrowserActivity : AppCompatActivity() {
     }
 
     // ---------- Hoja de videos (bottom sheet) ----------
+
+    /** Tocar transmitir (icono de Roku o píldora): si ya hay
+     *  videos, abre la hoja; si no, re-escanea la página y espera
+     *  el resultado antes de decir que no hay video. El
+     *  reproductor puede poner el src tarde (al darle play) y el
+     *  escaneo de carga ya pasó: sin este re-escaneo el botón
+     *  miente. Si hay <video> pero sin enlace detectable, el aviso
+     *  dice qué hacer en vez de afirmar que no hay video. */
+    private fun intentarTransmitir() {
+        if (detectedVideos.isNotEmpty()) {
+            abrirHojaVideos()
+            return
+        }
+        Toast.makeText(this, "Buscando video…", Toast.LENGTH_SHORT).show()
+        var resuelto = false
+        scanPageForVideos { res ->
+            if (resuelto) return@scanPageForVideos
+            resuelto = true
+            if (detectedVideos.isNotEmpty()) {
+                abrirHojaVideos()
+            } else if (res.videosEnPagina > 0) {
+                Toast.makeText(
+                    this,
+                    "Hay un video en la página pero no se pudo detectar " +
+                        "su enlace. Dale play al video y vuelve a intentarlo.",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Conectado a ${UniversalCast.activeLabel()}: " +
+                        "no hay video en esta página.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+        // Seguridad: si el escaneo no responde en ~1.5 s, avisa
+        // igual (evaluateJavascript puede fallar en silencio).
+        lifecycleScope.launch {
+            delay(1500)
+            if (!resuelto) {
+                resuelto = true
+                if (detectedVideos.isNotEmpty()) {
+                    abrirHojaVideos()
+                } else {
+                    Toast.makeText(
+                        this@BrowserActivity,
+                        "Conectado a ${UniversalCast.activeLabel()}: " +
+                            "no hay video en esta página.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
 
     /** Abre la hoja con la lista de videos. El video principal va
      *  PRIMERO; los demás después, en orden de aparición. Si se pasa

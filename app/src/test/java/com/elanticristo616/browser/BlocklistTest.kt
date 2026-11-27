@@ -281,4 +281,55 @@ class BlocklistTest {
         assertFalse(Blocklist.isBlockedHost("z6v2p9a8.bkcdn.net"))
         assertFalse(Blocklist.isBlockedHost("bkcdn.net"))
     }
+
+    @Test
+    fun `las urls de video estilo KVS se detectan como video directo`() {
+        // v1.1.6: KVS (ScatGold) emite <source> con
+        // .../get_file/.../video_720p.mp4/ (barra final) y el 302
+        // puede ir a remote_control.php?file=...mp4: antes ninguna
+        // de las dos pasaba isDirectVideoUrl/isMediaUrl y el
+        // selector quedaba vacio aunque el video sonara.
+        val kvs = listOf(
+            "https://z6v2p9a8.bkcdn.net/get_file/123/abc123def456/0/456/456_720p.mp4/",
+            "https://scat.gold/get_file/123/abc123def456/0/456/456.mp4/",
+            "https://z6v2p9a8.bkcdn.net/remote_control.php?file=videos/456_720p.mp4&token=abc",
+            "https://z6v2p9a8.bkcdn.net/videos/456_720p.mp4",
+            "https://z6v2p9a8.bkcdn.net/videos/hls/456/hls.m3u8?token=abc",
+            "https://z6v2p9a8.bkcdn.net/get_file/123/abc/0/456/hls.m3u8/"
+        )
+        for (u in kvs) {
+            assertTrue("es video directo: $u", Blocklist.isVideoFileUrl(u))
+            assertTrue("es medio: $u", Blocklist.isMediaUrl(u))
+            assertFalse(
+                "el video KVS no se bloquea: $u",
+                Blocklist.shouldBlockRequest(u, false)
+            )
+            assertFalse(
+                "la navegacion al video KVS no se veta: $u",
+                Blocklist.shouldVetoNavigation(u, "scat.gold")
+            )
+        }
+        // Una miniatura con .mp4 en el nombre NO es video.
+        assertFalse(
+            Blocklist.isVideoFileUrl(
+                "https://cdn.example.com/thumbs/video.mp4.jpg"
+            )
+        )
+        assertFalse(
+            Blocklist.isMediaUrl(
+                "https://cdn.example.com/thumbs/video.mp4.jpg"
+            )
+        )
+        // Una busqueda con .mp4 en el texto tampoco.
+        assertFalse(
+            Blocklist.isVideoFileUrl("https://example.com/buscar?q=video.mp4")
+        )
+        // Ni una ruta que solo menciona .mp4.
+        assertFalse(
+            Blocklist.isVideoFileUrl("https://example.com/ver/video.mp4/info")
+        )
+        // (Que sea video por forma no quita el filtro de anuncios:
+        // el intercept y el escaneo siguen descartando la URL si
+        // huele a anuncio con AdFilter.isAdUrl.)
+    }
 }

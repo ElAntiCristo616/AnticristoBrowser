@@ -57,6 +57,53 @@ object Blocklist {
         ".ts", ".m4s", ".m4v", ".m4a"
     )
 
+    /** Extensiones de video directo (sin segmentos: un .ts solo no
+     *  se puede transmitir como el video completo). */
+    private val VIDEO_EXTENSIONS = listOf(
+        ".mp4", ".m3u8", ".mpd", ".webm", ".mov", ".mkv"
+    )
+
+    /** Claves de parámetro que suelen llevar un archivo de video
+     *  como valor (?file=...mp4, ?src=...). */
+    private val FILE_PARAM_KEYS = setOf(
+        "file", "src", "url", "media", "video", "hls", "u"
+    )
+
+    /** ¿La URL trae una de estas extensiones como archivo de video?
+     *  Formas reales de los reproductores: al final de la ruta
+     *  (video.mp4), con barra final (KVS: .../video_720p.mp4/) o en
+     *  el valor de un parámetro (?file=...mp4&token=...). La
+     *  extensión debe ir al final del valor — una miniatura
+     *  "video.mp4.jpg" no cuenta, y una búsqueda "?q=video.mp4"
+     *  tampoco (el valor no parece ruta ni es clave de archivo). */
+    private fun hasVideoExtension(lower: String, exts: List<String>): Boolean {
+        val path = lower.substringBefore('?').substringBefore('#').trimEnd('/')
+        if (exts.any { path.endsWith(it) }) return true
+        val query = lower.substringAfter('?', "").substringBefore('#')
+        if (query.isNotEmpty()) {
+            for (param in query.split('&')) {
+                val eq = param.indexOf('=')
+                if (eq < 0) continue
+                val key = param.substring(0, eq)
+                val value = param.substring(eq + 1)
+                    .substringBefore('?').trimEnd('/')
+                if (value.isEmpty()) continue
+                val pareceArchivo = value.contains('/') || key in FILE_PARAM_KEYS
+                if (pareceArchivo && exts.any { value.endsWith(it) }) return true
+            }
+        }
+        return false
+    }
+
+    /** ¿La URL apunta a un archivo de video directo? (Para el
+     *  selector y el intercept: NO incluye segmentos .ts/.m4s.) */
+    internal fun isVideoFileUrl(url: String): Boolean {
+        val lower = url.lowercase(Locale.ROOT)
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) return false
+        if (hasVideoExtension(lower, VIDEO_EXTENSIONS)) return true
+        return lower.contains("media=hls")
+    }
+
     @Volatile
     private var domains: Set<String>? = null
 
@@ -113,10 +160,8 @@ object Blocklist {
     /** ¿La URL es video directo o segmento de streaming? */
     internal fun isMediaUrl(url: String): Boolean {
         val lower = url.lowercase(Locale.ROOT)
-        val noQuery = lower.substringBefore('?').substringBefore('#')
-        if (MEDIA_EXTENSIONS.any { noQuery.endsWith(it) }) return true
-        return lower.contains(".mp4?") || lower.contains(".m3u8") ||
-            lower.contains(".mpd?") || lower.contains("media=hls")
+        if (hasVideoExtension(lower, MEDIA_EXTENSIONS)) return true
+        return lower.contains("media=hls")
     }
 
     /** Extrae el host en minúsculas de una URL (o null). Usa

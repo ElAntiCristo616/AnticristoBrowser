@@ -96,4 +96,14 @@ class AdFilterTest {
         assertTrue(AdFilter.TRAP_BLOCK_JS.contains("removeAttribute('onclick')"))
         assertTrue(AdFilter.TRAP_BLOCK_JS.contains("esControlReal"))
     }
+
+    @Test
+    fun `el js anti-trampa instala su listener de clic una sola vez`() {
+        // v1.1.6: la inyección se repite 3 veces por carga (al
+        // cargar, 1.5 s y 4 s): sin la guarda quedaban 3 listeners
+        // idénticos en document.
+        assertTrue(
+            AdFilter.TRAP_BLOCK_JS.contains("__novnaTrapInstalado")
+        )
+    }
 }

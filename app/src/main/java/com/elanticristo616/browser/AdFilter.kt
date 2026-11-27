@@ -174,6 +174,12 @@ o.style.setProperty('display','none','important');
      * 1.5 s y 4 s, como HIDE_ADS_JS. No toca el escaneo de videos
      * (scanPageForVideos) ni el botón de transmitir: todo eso es
      * UI nativa de Android, no DOM.
+     *
+     * v1.1.6: el listener de clic se instala UNA sola vez
+     * (guarda `window.__novnaTrapInstalado`): la inyección se
+     * repite 3 veces por carga y sin la guarda quedaban 3
+     * listeners idénticos en `document`. La parte (c) sí se
+     * repite en cada inyección (los overlays aparecen tarde).
      */
     const val TRAP_BLOCK_JS = """
 (function(){
@@ -219,6 +225,7 @@ if(v.paused){var pr=v.play();if(pr&&pr.catch)pr.catch(function(){});}
 else{v.pause();}
 }catch(e){}
 }
+if(!window.__novnaTrapInstalado){window.__novnaTrapInstalado=true;
 document.addEventListener('click',function(e){
 try{
 var t=e.target;
@@ -237,7 +244,7 @@ if(!overlay)return;
 e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
 alternarVideo(v);
 }catch(err){}
-},true);
+},true);}
 try{
 var all=document.querySelectorAll('div,a,span,button');
 for(var k=0;k<all.length;k++){
