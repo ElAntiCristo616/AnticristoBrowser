@@ -3,6 +3,7 @@ package com.elanticristo616.browser
 import android.content.Context
 import androidx.mediarouter.media.MediaRouter
 import androidx.mediarouter.media.MediaRouteSelector
+import com.google.android.gms.cast.CastDevice
 import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
@@ -57,7 +58,13 @@ class CastOptionsProvider : OptionsProvider {
  */
 object GoogleCastManager {
 
-    data class CastRoute(val id: String, val name: String, val route: MediaRouter.RouteInfo)
+    data class CastRoute(
+        val id: String,
+        val name: String,
+        val route: MediaRouter.RouteInfo,
+        /** IP del aparato, si el SDK la expone; null si no. */
+        val ip: String? = null
+    )
 
     private var castContext: CastContext? = null
     private var sessionManager: SessionManager? = null
@@ -115,10 +122,18 @@ object GoogleCastManager {
             if (!route.isEnabled) continue
             if (!route.matchesSelector(sel)) continue
             cachedRoutes += CastRoute(
-                route.id, route.name?.toString() ?: "Chromecast", route
+                route.id, route.name?.toString() ?: "Chromecast", route,
+                castDeviceIp(route)
             )
         }
         routesChanged?.invoke(cachedRoutes.toList())
+    }
+
+    /** IP del aparato Cast, si el SDK la expone; null si no. */
+    private fun castDeviceIp(route: MediaRouter.RouteInfo): String? = try {
+        CastDevice.getFromBundle(route.extras)?.ipAddress?.hostAddress
+    } catch (e: Exception) {
+        null
     }
 
     private val routerCallback = object : MediaRouter.Callback() {

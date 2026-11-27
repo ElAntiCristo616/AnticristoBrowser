@@ -95,7 +95,8 @@ class GoogleCastTarget(val route: GoogleCastManager.CastRoute) : CastTarget {
     override val id = "cast:${route.id}"
     override val name = route.name
     override val protocol = "Chromecast"
-    override val detail = ""
+    /** v1.1.3: la IP, para distinguir dos teles con el mismo nombre. */
+    override val detail = route.ip ?: ""
 
     private fun ok(result: Boolean, okMsg: String, errMsg: String) =
         if (result) CastHelper.CastResult(true, okMsg)
@@ -306,20 +307,25 @@ object DeviceDiscovery {
         val out = mutableListOf<CastTarget>()
         for (device in rokuDevices) out += RokuCastTarget(device.ip, device.name)
         for (route in castRoutes) out += GoogleCastTarget(route)
-        // v1.1.1: deduplicar — una misma cajita (p. ej. una Android
-        // TV como la MundoGoTV) expone Cast y DLNA a la vez y salía
-        // dos veces en la hoja. Se prefiere Chromecast; un DLNA con
-        // la IP de una Roku o con el mismo nombre de un Cast es el
-        // mismo aparato y no se agrega. Tampoco se repite un DLNA
-        // por IP.
-        val castNames = castRoutes
-            .map { it.name.trim().lowercase() }.toSet()
-        val rokuIps = rokuDevices.map { it.ip }.toSet()
-        val seenDlnaIps = mutableSetOf<String>()
+        // v1.1.3: deduplicar solo cuando es el MISMO aparato
+        // probado (IP y nombre coinciden a la vez). La regla
+        // anterior quitaba por nombre solo o por IP sola y
+        // escondía la segunda tele cuando dos teles se llamaban
+        // igual o compartían IP: en casa del amigo hay dos teles
+        // y solo salía una. Sin IP de Cast no se quita nada por
+        // nombre solo: salen las dos. Dos teles en conflicto de
+        // IP con nombres distintos también salen las dos:
+        // esconder una es peor que mostrarla.
+        fun norm(name: String) = name.trim().lowercase()
+        val castKeys = castRoutes
+            .mapNotNull { r -> r.ip?.let { it to norm(r.name) } }.toSet()
+        val rokuKeys = rokuDevices.map { it.ip to norm(it.name) }.toSet()
+        val seenDlnaKeys = mutableSetOf<Pair<String, String>>()
         for (device in dlnaDevices) {
-            if (device.ip in rokuIps) continue
-            if (device.name.trim().lowercase() in castNames) continue
-            if (!seenDlnaIps.add(device.ip)) continue
+            val key = device.ip to norm(device.name)
+            if (key in rokuKeys) continue
+            if (key in castKeys) continue
+            if (!seenDlnaKeys.add(key)) continue
             out += DlnaCastTarget(device)
         }
         // La Roku de la puerta siempre está aunque el SSDP no la vea.
