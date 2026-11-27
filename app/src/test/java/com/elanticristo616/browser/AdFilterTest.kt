@@ -52,4 +52,21 @@ class AdFilterTest {
         assertTrue(AdFilter.AD_CHECK_JS.contains("doubleclick"))
         assertTrue(AdFilter.AD_CHECK_JS.contains("preroll"))
     }
+
+    @Test
+    fun `el js de deteccion trae las senales de anuncio de YouTube`() {
+        // El pre-roll sale del mismo servidor que el video: solo el
+        // reproductor lo delata (clases ad-showing / ytp-ad-*).
+        assertTrue(AdFilter.AD_CHECK_JS.contains("ytp-ad"))
+        assertTrue(AdFilter.AD_CHECK_JS.contains("ad-showing"))
+        assertTrue(AdFilter.AD_CHECK_JS.contains("ad-interrupting"))
+    }
+
+    @Test
+    fun `el js para esconder anuncios usa esAnuncio y protege el video real`() {
+        assertTrue(AdFilter.HIDE_ADS_JS.contains("esAnuncio"))
+        assertTrue(AdFilter.HIDE_ADS_JS.contains("hasBigVideo"))
+        assertTrue(AdFilter.HIDE_ADS_JS.contains("display','none','important"))
+        assertTrue(AdFilter.HIDE_ADS_JS.contains("VIDEO"))
+    }
 }

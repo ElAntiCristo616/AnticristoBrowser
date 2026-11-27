@@ -60,6 +60,15 @@ object AdFilter {
      * data-ad, aria-label/título que digan anuncio, e iframes de
      * redes de publicidad. Se inyecta tal cual en el JS de
      * BrowserActivity.scanPageForVideos.
+     *
+     * v1.1.4: señales explícitas del reproductor de YouTube. El
+     * anuncio pre-roll sale del mismo servidor que el video
+     * (googlevideo.com) y no se distingue por dominio, pero el
+     * reproductor SÍ lo marca: el contenedor lleva las clases
+     * `ad-showing` / `ad-interrupting` y el overlay `ytp-ad-*`.
+     * Cuando el anuncio suena, el <video> queda dentro de ese
+     * contenedor y esAnuncio lo marca como anuncio: el selector no
+     * lo muestra como tarjeta y el video principal queda intacto.
      */
     const val AD_CHECK_JS = """
 function clsStr(el){var c='';try{c=(el.className&&el.className.baseVal!==undefined)?el.className.baseVal:(el.className||'');}catch(e){}return (''+c+' '+(el.id||'')).toLowerCase();}
@@ -67,6 +76,7 @@ function esAnuncio(el){
 var n=el,d=0;
 while(n&&d<6){
 var s=clsStr(n);
+if(s.indexOf('ytp-ad')>=0||s.indexOf('ad-showing')>=0||s.indexOf('ad-interrupting')>=0||s.indexOf('video-ads')>=0)return true;
 if(/(^|[\s\-_])(ad|ads|advert|advertisement|sponsor|preroll|midroll|postroll|banner|promo|teaser|popup|popunder|commercial|interstitial|outstream|instream|adslot|ad-break|ad-container|video-ad)([\s\-_]|$)/.test(s))return true;
 try{
 if(n.dataset&&(n.dataset.ad!==undefined||n.dataset.adSlot!==undefined||n.dataset.adClient!==undefined))return true;
@@ -82,5 +92,51 @@ n=n.parentElement;d++;
 }
 return false;
 }
+"""
+
+    /**
+     * JS que ESCONDE los anuncios de la página (v1.1.4). Reutiliza
+     * esAnuncio de AD_CHECK_JS: oculta los elementos con pinta de
+     * anuncio (contenedores, iframes de redes, botones falsos de
+     * play dentro de contenedores de anuncios) y los overlays fijos
+     * a pantalla completa que tapan todo y no son el reproductor.
+     *
+     * NUNCA oculta el reproductor real: un elemento que contiene un
+     * <video> visible y grande (>200x150) no se toca, y los <video>
+     * mismos tampoco. Se corre al terminar de cargar la página y se
+     * repite un par de veces con retraso, porque estas páginas
+     * inyectan sus anuncios después de la carga.
+     */
+    const val HIDE_ADS_JS = AD_CHECK_JS + """
+(function(){
+try{
+function hasBigVideo(el){
+var vs=el.querySelectorAll?el.querySelectorAll('video'):[];
+for(var i=0;i<vs.length;i++){
+try{var r=vs[i].getBoundingClientRect();if(r.width>200&&r.height>150)return true;}catch(e){}
+}
+return false;
+}
+var els=document.querySelectorAll('div,section,aside,iframe,button,a,span');
+for(var i=0;i<els.length;i++){
+var el=els[i];
+if(el.tagName==='VIDEO')continue;
+try{if(esAnuncio(el)&&!hasBigVideo(el))el.style.setProperty('display','none','important');}catch(e){}
+}
+var ovs=document.querySelectorAll('div');
+for(var j=0;j<ovs.length;j++){
+var o=ovs[j];
+try{
+var cs=window.getComputedStyle(o);
+if((cs.position==='fixed'||cs.position==='absolute')&&parseInt(cs.zIndex||'0',10)>=9999){
+var r=o.getBoundingClientRect();
+if(r.width>=window.innerWidth*0.9&&r.height>=window.innerHeight*0.9&&!hasBigVideo(o)&&!o.querySelector('video')){
+if(esAnuncio(o))o.style.setProperty('display','none','important');
+}
+}
+}catch(e){}
+}
+}catch(e){}
+})()
 """
 }

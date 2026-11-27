@@ -1,0 +1,99 @@
+# CuteNovna Browser — lista de bloqueo de anuncios/rastreadores.
+# Fuente: DuckDuckGo Tracker Blocklist (tds.json)
+#   https://github.com/duckduckgo/tracker-blocklists
+#   https://staticcdn.duckduckgo.com/trackerblocking/v3/tds.json
+# Licencia de los datos: CC BY-NC-SA 4.0, Copyright 2022 Duck Duck Go, Inc.
+# Generado: 2026-11-27 | tds tracker-radar: 6c4fc9f4d9543a64c65fe1c884428b01f5fc2c97a922213350663e053efa7259-62a93b03bccfc0d4f32eb8759b7da56310c2cd1a
+# 89 dominios base (matching por sufijo en la app).
+# NUNCA incluye dominios de video (googlevideo.com, youtube.com,
+# ytimg.com...), CDNs de medios, login ni red local.
+# Regenerar con: python3 tools/gen_blocklist.py
+2mdn.net
+ad.crwdcntrl.net
+adblade.com
+adcash.com
+adform.net
+admaven.com
+adnium.com
+adnxs.com
+adobedc.net
+adobedtm.com
+adroll.com
+adspyglass.com
+adsterra.com
+adzerk.net
+amazon-adsystem.com
+aniview.com
+applovin.com
+bc0a.com
+cdn.blueconic.net
+cdn.listrakbi.com
+cdn.mxpnl.com
+chartbeat.com
+chartboost.com
+clickadu.com
+clickaine.com
+connatix.com
+contextual.media.net
+criteo.com
+criteo.net
+dev.visualwebsiteoptimizer.com
+doubleclick.net
+edge.permutive.app
+eroadvertising.com
+exoclick.com
+flashtalking.com
+freewheel.tv
+fwmrm.net
+google-analytics.com
+googleadservices.com
+googlesyndication.com
+googletagmanager.com
+googletagservices.com
+hilltopads.com
+htlbid.com
+imrworldwide.com
+indexexchange.com
+inmobi.com
+intelligems.io
+ironsource.com
+juicyads.com
+lijit.com
+mgid.com
+micro.rubiconproject.com
+moatads.com
+mopub.com
+newrelic.com
+nexus.ensighten.com
+nr-data.net
+omtrdc.net
+openx.net
+outbrain.com
+parsely.com
+plugrush.com
+popads.net
+popcash.net
+propellerads.com
+pubmatic.com
+revcontent.com
+richads.com
+scorecardresearch.com
+segment.com
+sharethrough.com
+smaato.com
+smartadserver.com
+sovrn.com
+spotx.tv
+springserve.com
+static.adsafeprotected.com
+taboola.com
+tapjoy.com
+tiqcdn.com
+trafficjunky.com
+trafficstars.com
+triplelift.com
+vidazoo.com
+vungle.com
+yieldmo.com
+yotpo.com
+zedo.com

@@ -85,6 +85,12 @@ import java.net.URL
  * el buscador es fijo DuckDuckGo. La página de ajustes del propio
  * DuckDuckGo (duckduckgo.com/settings*) está bloqueada: no se carga
  * y se avisa. Los inicios de sesión (p. ej. Gmail) NO se bloquean.
+ *  - v1.1.4: bloqueo de anuncios casi total en 4 capas — lista de
+ *    DuckDuckGo a nivel de petición (Blocklist), sin ventanas nuevas,
+ *    veto a las redirecciones a dominios de anuncios al tocar, y JS
+ *    que esconde botones falsos de play, overlays y contenedores de
+ *    anuncios. El video principal, los hosts de video, el login y la
+ *    red local (Cast/DLNA/Roku) no se tocan jamás.
  */
 class BrowserActivity : AppCompatActivity() {
 
@@ -251,6 +257,8 @@ class BrowserActivity : AppCompatActivity() {
             }
         )
 
+        // v1.1.4: carga la lista de bloqueo de anuncios (asset).
+        Blocklist.init(this)
         setupWebView()
         val startUrl = intent.getStringExtra("url") ?: "https://duckduckgo.com"
         if (isSettingsBloqueada(startUrl)) {
@@ -336,6 +344,11 @@ class BrowserActivity : AppCompatActivity() {
             settings.domStorageEnabled = true
             settings.databaseEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
+            // v1.1.4: sin ventanas nuevas ni pop-ups de JavaScript.
+            // Los pop-ups invasivos de las páginas de pelis/series
+            // nacen de window.open: con esto no se abren.
+            settings.javaScriptCanOpenWindowsAutomatically = false
+            settings.setSupportMultipleWindows(false)
             settings.userAgentString = CHROME_MOBILE_UA
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             cookieManager.setAcceptThirdPartyCookies(this, true)
@@ -364,6 +377,24 @@ class BrowserActivity : AppCompatActivity() {
                             true
                         }
                     }
+                    // v1.1.4: si al tocar algo la página quiere
+                    // mandarnos a un dominio de anuncios/rastreadores
+                    // (el salto a otra página con el pop-up invasivo),
+                    // se veta y nos quedamos donde estábamos. La
+                    // navegación legítima (resultados, páginas de
+                    // video, login) no es un dominio bloqueado y pasa.
+                    // Solo dominios de la lista: nunca por marcadores
+                    // de texto, para no romper URLs legítimas.
+                    if (Blocklist.shouldVetoNavigation(url)) {
+                        if (request.isForMainFrame) {
+                            Toast.makeText(
+                                this@BrowserActivity,
+                                "Anuncio bloqueado",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        return true
+                    }
                     return false
                 }
 
@@ -382,6 +413,19 @@ class BrowserActivity : AppCompatActivity() {
                     currentUrl = url
                     binding.etDireccion.setText(url)
                     scanPageForVideos()
+                    // v1.1.4: esconder los anuncios de la página
+                    // (botones falsos de play, overlays, contenedores
+                    // de anuncios). Se repite con retraso porque
+                    // estas páginas inyectan sus anuncios después de
+                    // cargar. No toca el reproductor real ni el
+                    // escaneo de videos, que ya corrió arriba.
+                    ocultarAnuncios()
+                    lifecycleScope.launch {
+                        delay(1500)
+                        if (!isFinishing) ocultarAnuncios()
+                        delay(2500)
+                        if (!isFinishing) ocultarAnuncios()
+                    }
                     // Si se había pausado el WebView al transmitir, se
                     // reanuda al cargar otra página.
                     view.onResume()
@@ -395,6 +439,18 @@ class BrowserActivity : AppCompatActivity() {
                     if (isDirectVideoUrl(u) && !isAdUrl(u)) {
                         runOnUiThread { onDirectVideoFound(u) }
                     }
+                    // v1.1.4: bloqueo a nivel de petición. Los scripts
+                    // de anuncios y rastreadores no llegan a cargar:
+                    // el pop-up ni nace. Nunca el marco principal
+                    // (eso lo veta shouldOverrideUrlLoading), nunca
+                    // video/medios, nunca la red local ni los hosts
+                    // de video y login (lo cuida Blocklist).
+                    if (Blocklist.shouldBlockRequest(u, request.isForMainFrame)) {
+                        return WebResourceResponse(
+                            "text/plain", "utf-8",
+                            java.io.ByteArrayInputStream(ByteArray(0))
+                        )
+                    }
                     return super.shouldInterceptRequest(view, request)
                 }
             }
@@ -402,6 +458,14 @@ class BrowserActivity : AppCompatActivity() {
                 override fun onReceivedTitle(view: WebView, title: String?) {
                     pageTitle = title ?: ""
                 }
+
+                // v1.1.4: nunca abrir ventanas nuevas (pop-ups).
+                override fun onCreateWindow(
+                    view: WebView,
+                    isDialog: Boolean,
+                    isUserGesture: Boolean,
+                    resultMsg: android.os.Message?
+                ): Boolean = false
             }
         }
     }
@@ -449,6 +513,17 @@ class BrowserActivity : AppCompatActivity() {
     /** ¿La URL huele a anuncio? (AdFilter: marcadores de redes de
      *  publicidad, VAST, preroll/midroll y patrocinados.) */
     private fun isAdUrl(u: String): Boolean = AdFilter.isAdUrl(u)
+
+    /** v1.1.4: esconde los anuncios de la página cargada (botones
+     *  falsos de play, overlays, contenedores de anuncios). No toca
+     *  el reproductor real (ver AdFilter.HIDE_ADS_JS). */
+    private fun ocultarAnuncios() {
+        try {
+            binding.webView.evaluateJavascript(AdFilter.HIDE_ADS_JS, null)
+        } catch (e: Exception) {
+            // Si el JS falla, la página sigue igual: no se rompe nada.
+        }
+    }
 
     // ---------- Detección de video (agrupada) ----------
 
@@ -538,25 +613,12 @@ class BrowserActivity : AppCompatActivity() {
      *  menos de 10 s, y URLs blob:/data: como entradas (no se
      *  pueden transmitir). */
     private fun scanPageForVideos() {
-        val js = "(function(){" +
-            "function clsStr(el){" +
-            "var c='';" +
-            "try{c=(el.className&&el.className.baseVal!==undefined)?el.className.baseVal:(el.className||'');}catch(e){}" +
-            "return (''+c+' '+(el.id||'')).toLowerCase();" +
-            "}" +
-            "function esAnuncio(el){" +
-            "var n=el,d=0;" +
-            "while(n&&d<6){" +
-            "var s=clsStr(n);" +
-            "if(/(^|[\\s\\-_])(ad|ads|advert|advertisement|sponsor|preroll|midroll|postroll|banner|promo|teaser|popup|popunder)([\\s\\-_]|$)/.test(s))return true;" +
-            "if(n.tagName==='IFRAME'){" +
-            "var src=(n.src||'').toLowerCase();" +
-            "if(src.indexOf('doubleclick')>=0||src.indexOf('googlesyndication')>=0||src.indexOf('ads')>=0||src.indexOf('vast')>=0||src.indexOf('exoclick')>=0||src.indexOf('popads')>=0)return true;" +
-            "}" +
-            "n=n.parentElement;d++;" +
-            "}" +
-            "return false;" +
-            "}" +
+        // v1.1.4: la detección de anuncios vive en un solo sitio
+        // (AdFilter.AD_CHECK_JS), con las señales del reproductor de
+        // YouTube incluidas: cuando suena el pre-roll, el <video>
+        // queda dentro del contenedor `ad-showing` y se marca como
+        // anuncio, así que no sale como tarjeta.
+        val js = "(function(){" + AdFilter.AD_CHECK_JS +
             "var out=[];" +
             "document.querySelectorAll('video').forEach(function(el){" +
             "var r={w:0,h:0,y:0};" +
