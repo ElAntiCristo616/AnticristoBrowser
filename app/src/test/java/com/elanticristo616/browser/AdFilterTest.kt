@@ -69,4 +69,31 @@ class AdFilterTest {
         assertTrue(AdFilter.HIDE_ADS_JS.contains("display','none','important"))
         assertTrue(AdFilter.HIDE_ADS_JS.contains("VIDEO"))
     }
+
+    @Test
+    fun `el js de deteccion marca iframes de afiliados y widgets de tienda`() {
+        // v1.1.5: el widget de AliExpress es un iframe cross-origin:
+        // no se puede leer dentro, pero el iframe mismo se esconde
+        // por su src (afiliados/redes de anuncios).
+        assertTrue(AdFilter.AD_CHECK_JS.contains("aliexpress"))
+        assertTrue(AdFilter.AD_CHECK_JS.contains("skimlinks"))
+        assertTrue(AdFilter.AD_CHECK_JS.contains("impactradius"))
+        assertTrue(AdFilter.AD_CHECK_JS.contains("affiliate"))
+        assertTrue(AdFilter.HIDE_ADS_JS.contains("hasAdIframe"))
+    }
+
+    @Test
+    fun `el js anti-trampa del play anula window open y reproduce el video`() {
+        // v1.1.5: (a) window.open anulado, (b) clic en captura sobre
+        // overlays que tapan el video -> reproduce/pausa el video
+        // real, (c) se borra onclick en overlays de pantalla casi
+        // completa.
+        assertTrue(AdFilter.TRAP_BLOCK_JS.contains("window.open=function(){return null;}"))
+        assertTrue(AdFilter.TRAP_BLOCK_JS.contains("stopPropagation"))
+        assertTrue(AdFilter.TRAP_BLOCK_JS.contains("stopImmediatePropagation"))
+        assertTrue(AdFilter.TRAP_BLOCK_JS.contains("alternarVideo"))
+        assertTrue(AdFilter.TRAP_BLOCK_JS.contains("solapaVideo"))
+        assertTrue(AdFilter.TRAP_BLOCK_JS.contains("removeAttribute('onclick')"))
+        assertTrue(AdFilter.TRAP_BLOCK_JS.contains("esControlReal"))
+    }
 }

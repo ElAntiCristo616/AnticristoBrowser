@@ -11,8 +11,8 @@ android {
         applicationId = "com.elanticristo616.browser"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "1.1.4"
+        versionCode = 11
+        versionName = "1.1.5"
 
         // yt-dlp trae Python compilado por ABI (~15 MB por ABI):
         // solo arm64 y armeabi-v7a cubren prácticamente todos los

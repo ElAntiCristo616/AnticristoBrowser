@@ -86,7 +86,7 @@ if(al.indexOf('anuncio')>=0||al.indexOf('advertisement')>=0||al.indexOf('publici
 }catch(e){}
 if(n.tagName==='IFRAME'){
 var src=(n.src||'').toLowerCase();
-if(src.indexOf('doubleclick')>=0||src.indexOf('googlesyndication')>=0||src.indexOf('ads')>=0||src.indexOf('vast')>=0||src.indexOf('exoclick')>=0||src.indexOf('popads')>=0||src.indexOf('taboola')>=0||src.indexOf('outbrain')>=0||src.indexOf('adnxs')>=0||src.indexOf('criteo')>=0||src.indexOf('mgid')>=0||src.indexOf('adsterra')>=0||src.indexOf('propellerads')>=0||src.indexOf('trafficjunky')>=0||src.indexOf('juicyads')>=0||src.indexOf('smartadserver')>=0||src.indexOf('rubiconproject')>=0||src.indexOf('pubmatic')>=0||src.indexOf('prebid')>=0||src.indexOf('adform')>=0||src.indexOf('flashtalking')>=0||src.indexOf('imasdk')>=0||src.indexOf('googleads')>=0||src.indexOf('adservice')>=0)return true;
+if(src.indexOf('doubleclick')>=0||src.indexOf('googlesyndication')>=0||src.indexOf('ads')>=0||src.indexOf('vast')>=0||src.indexOf('exoclick')>=0||src.indexOf('popads')>=0||src.indexOf('taboola')>=0||src.indexOf('outbrain')>=0||src.indexOf('adnxs')>=0||src.indexOf('criteo')>=0||src.indexOf('mgid')>=0||src.indexOf('adsterra')>=0||src.indexOf('propellerads')>=0||src.indexOf('trafficjunky')>=0||src.indexOf('juicyads')>=0||src.indexOf('smartadserver')>=0||src.indexOf('rubiconproject')>=0||src.indexOf('pubmatic')>=0||src.indexOf('prebid')>=0||src.indexOf('adform')>=0||src.indexOf('flashtalking')>=0||src.indexOf('imasdk')>=0||src.indexOf('googleads')>=0||src.indexOf('adservice')>=0||src.indexOf('aliexpress')>=0||src.indexOf('skimlinks')>=0||src.indexOf('viglink')>=0||src.indexOf('impactradius')>=0||src.indexOf('shareasale')>=0||src.indexOf('awin1')>=0||src.indexOf('linksynergy')>=0||src.indexOf('anrdoezrs')>=0||src.indexOf('dpbolvw')>=0||src.indexOf('kqzyfj')>=0||src.indexOf('jdoqocy')>=0||src.indexOf('tkqlhce')>=0||src.indexOf('apmebf')>=0||src.indexOf('affiliate')>=0||src.indexOf('go2cloud')>=0||src.indexOf('clickbank')>=0)return true;
 }
 n=n.parentElement;d++;
 }
@@ -117,6 +117,14 @@ try{var r=vs[i].getBoundingClientRect();if(r.width>200&&r.height>150)return true
 }
 return false;
 }
+function hasAdIframe(el){
+try{
+var frs=el.querySelectorAll?el.querySelectorAll('iframe'):[];
+for(var i=0;i<frs.length;i++){try{if(esAnuncio(frs[i]))return true;}catch(e){}}
+if(el.tagName==='IFRAME'){try{if(esAnuncio(el))return true;}catch(e){}}
+}catch(e){}
+return false;
+}
 var els=document.querySelectorAll('div,section,aside,iframe,button,a,span');
 for(var i=0;i<els.length;i++){
 var el=els[i];
@@ -128,14 +136,126 @@ for(var j=0;j<ovs.length;j++){
 var o=ovs[j];
 try{
 var cs=window.getComputedStyle(o);
-if((cs.position==='fixed'||cs.position==='absolute')&&parseInt(cs.zIndex||'0',10)>=9999){
+if(cs.position==='fixed'||cs.position==='absolute'){
+var zi=parseInt(cs.zIndex||'0',10);
 var r=o.getBoundingClientRect();
-if(r.width>=window.innerWidth*0.9&&r.height>=window.innerHeight*0.9&&!hasBigVideo(o)&&!o.querySelector('video')){
-if(esAnuncio(o))o.style.setProperty('display','none','important');
+if(zi>=9999&&r.width>=window.innerWidth*0.9&&r.height>=window.innerHeight*0.9&&!hasBigVideo(o)&&!o.querySelector('video')){
+if(esAnuncio(o)||hasAdIframe(o))o.style.setProperty('display','none','important');
+}else if(zi>=1000&&r.width>=window.innerWidth*0.5&&r.height>=window.innerHeight*0.4&&!hasBigVideo(o)&&hasAdIframe(o)){
+o.style.setProperty('display','none','important');
 }
 }
 }catch(e){}
 }
+}catch(e){}
+})()
+"""
+
+    /**
+     * JS que NEUTRALIZA LA TRAMPA DEL BOTÓN PLAY (v1.1.5).
+     *
+     * En las páginas de pelis/series/porno, el primer toque en el
+     * reproductor no reproduce: abre un anuncio (pop-up o salto a
+     * otra página). La trampa vive en un overlay transparente que
+     * tapa el video y en manejadores de clic del contenedor.
+     *
+     *  (a) window.open queda anulado: los pop-ups no abren nada.
+     *  (b) Un listener en fase de captura: si el clic cae en un
+     *      overlay que tapa el video (no es el video, no es un
+     *      control real), se frena y se reproduce/pausa el video
+     *      real. Así el primer toque reproduce en vez de abrir el
+     *      anuncio. Los controles reales (botones, barras, menús
+     *      pequeños) no se tocan.
+     *  (c) A los overlays que tapan el video casi por completo se
+     *      les borra onclick y, si son enlaces, se les anula el
+     *      destino.
+     *
+     * Se corre al terminar de cargar la página y se repite a los
+     * 1.5 s y 4 s, como HIDE_ADS_JS. No toca el escaneo de videos
+     * (scanPageForVideos) ni el botón de transmitir: todo eso es
+     * UI nativa de Android, no DOM.
+     */
+    const val TRAP_BLOCK_JS = """
+(function(){
+try{
+try{window.open=function(){return null;};}catch(e){}
+function clsT(el){var c='';try{c=(el.className&&el.className.baseVal!==undefined)?el.className.baseVal:(el.className||'');}catch(e){}return (''+c+' '+(el.id||'')).toLowerCase();}
+function esControlReal(el){
+if(!el)return false;
+var t=(el.tagName||'').toUpperCase();
+if(t==='BUTTON'||t==='INPUT'||t==='SELECT'||t==='TEXTAREA')return true;
+var s=clsT(el);
+if(s.indexOf('control')>=0||s.indexOf('ytp-')>=0||s.indexOf('vjs-control')>=0)return true;
+return false;
+}
+function contenedorConVideo(el){
+var n=el;
+for(var d=0;n&&d<8;d++){
+try{if(n.querySelector&&n.querySelector('video'))return n;}catch(e){}
+n=n.parentElement;
+}
+return null;
+}
+function videoMasGrande(root){
+var vs=root?root.querySelectorAll('video'):[];
+var best=null,area=0;
+for(var i=0;i<vs.length;i++){
+try{var r=vs[i].getBoundingClientRect();var a=r.width*r.height;if(a>area){area=a;best=vs[i];}}catch(e){}
+}
+return best;
+}
+function solapaVideo(el,v,frac){
+try{
+var tr=el.getBoundingClientRect(),vr=v.getBoundingClientRect();
+if(vr.width<=0||vr.height<=0)return false;
+var ox=Math.max(0,Math.min(tr.right,vr.right)-Math.max(tr.left,vr.left));
+var oy=Math.max(0,Math.min(tr.bottom,vr.bottom)-Math.max(tr.top,vr.top));
+return (ox*oy)>=(vr.width*vr.height*frac);
+}catch(e){return false;}
+}
+function alternarVideo(v){
+try{
+if(v.paused){var pr=v.play();if(pr&&pr.catch)pr.catch(function(){});}
+else{v.pause();}
+}catch(e){}
+}
+document.addEventListener('click',function(e){
+try{
+var t=e.target;
+if(!t||t.tagName==='VIDEO')return;
+if(esControlReal(t))return;
+var p=contenedorConVideo(t);
+if(!p)return;
+var v=videoMasGrande(p);
+if(!v)return;
+var n=t,overlay=null;
+while(n&&n!==p){
+if(solapaVideo(n,v,0.5)){overlay=n;break;}
+n=n.parentElement;
+}
+if(!overlay)return;
+e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+alternarVideo(v);
+}catch(err){}
+},true);
+try{
+var all=document.querySelectorAll('div,a,span,button');
+for(var k=0;k<all.length;k++){
+var el=all[k];
+if(el.tagName==='VIDEO'||esControlReal(el))continue;
+try{
+var vs=document.querySelectorAll('video');
+for(var m=0;m<vs.length;m++){
+if(solapaVideo(el,vs[m],0.8)){
+el.onclick=null;
+try{el.removeAttribute('onclick');}catch(e){}
+if(el.tagName==='A'){try{el.setAttribute('href','javascript:void(0)');}catch(e){}}
+break;
+}
+}
+}catch(e){}
+}
+}catch(e){}
 }catch(e){}
 })()
 """

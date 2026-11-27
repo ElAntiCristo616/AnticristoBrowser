@@ -10,8 +10,8 @@ import java.io.File
 import java.io.StringReader
 
 /**
- * CuteNovna Browser v1.1.4 — tests del bloqueo de anuncios.
- * La lista real (assets/duckduckgo-blocklist.txt) se carga en los
+ * CuteNovna Browser v1.1.5 — tests del bloqueo de anuncios.
+ * La lista real (assets/ad-blocklist.txt) se carga en los
  * tests y se comprueba contra ella: el video principal, los hosts
  * de video, el login y la red local no se bloquean jamás.
  */
@@ -21,13 +21,13 @@ class BlocklistTest {
 
     @Before
     fun cargarListaReal() {
-        val asset = File("src/main/assets/duckduckgo-blocklist.txt")
+        val asset = File("src/main/assets/ad-blocklist.txt")
         assetDomains = if (asset.exists()) {
             Blocklist.loadFromReader(asset.bufferedReader())
         } else {
             // Si el test corre desde otro directorio de trabajo.
             Blocklist.loadFromReader(
-                File("app/src/main/assets/duckduckgo-blocklist.txt")
+                File("app/src/main/assets/ad-blocklist.txt")
                     .bufferedReader()
             )
         }
@@ -53,11 +53,30 @@ class BlocklistTest {
             "accounts.google.com", "ssl.gstatic.com",
             "fonts.gstatic.com", "fonts.googleapis.com", "gstatic.com",
             "tiktok.com", "tiktokcdn.com", "fbcdn.net",
-            "cdninstagram.com", "roku.com", "localhost"
+            "cdninstagram.com", "roku.com", "localhost",
+            // v1.1.5: el CDN de video de las paginas (ScatGold) y la
+            // tienda no se bloquean jamas.
+            "bkcdn.net", "bunnycdn.com", "aliexpress.com", "alicdn.com"
         )
         for (d in prohibidos) {
             assertFalse("la lista no debe traer $d", assetDomains.contains(d))
         }
+    }
+
+    @Test
+    fun `la lista real es grande y trae EasyList mas el suplemento`() {
+        // Miles de dominios: EasyList + tds + suplemento.
+        assertTrue(
+            "la lista debe traer miles de dominios, trae ${assetDomains.size}",
+            assetDomains.size > 10000
+        )
+        assertTrue(assetDomains.contains("ad.aliexpress.com"))
+        // s.click.aliexpress.com se reduce a su padre
+        // click.aliexpress.com, que si esta en la lista.
+        assertTrue(assetDomains.contains("click.aliexpress.com"))
+        assertTrue(
+            Blocklist.isBlockedHost("s.click.aliexpress.com")
+        )
     }
 
     @Test
@@ -184,5 +203,82 @@ class BlocklistTest {
         )
         val loaded = Blocklist.loadFromReader(reader)
         assertEquals(setOf("doubleclick.net", "exoclock.com"), loaded)
+    }
+
+    @Test
+    fun `el veto fuerte veta el salto a otro host con pinta de anuncio`() {
+        // v1.1.5: navegacion del marco principal a OTRO host con
+        // marcadores de anuncio -> veto, aunque el dominio no este
+        // en la lista (el salto de la trampa del play).
+        assertTrue(
+            Blocklist.shouldVetoNavigation(
+                "https://randon-ads.example/promo/oferta?x=1",
+                "scat.gold"
+            )
+        )
+        assertTrue(
+            Blocklist.shouldVetoNavigation(
+                "https://otra-pagina.example/vast/preroll",
+                "scat.gold"
+            )
+        )
+        // Mismo host con marcadores: NO se veta (la pagina puede
+        // llevar "promo" o "banner" en su propia URL).
+        assertFalse(
+            Blocklist.shouldVetoNavigation(
+                "https://scat.gold/promo/oferta",
+                "scat.gold"
+            )
+        )
+        assertFalse(
+            Blocklist.shouldVetoNavigation(
+                "https://cuevana3.io/pelicula/banner-x",
+                "cuevana3.io"
+            )
+        )
+        // Sin host actual conocido: solo aplica el veto por lista.
+        assertFalse(
+            Blocklist.shouldVetoNavigation(
+                "https://randon-ads.example/promo/oferta?x=1",
+                null
+            )
+        )
+        // Video directo a otro host: nunca se veta.
+        assertFalse(
+            Blocklist.shouldVetoNavigation(
+                "https://cdn.example.com/video.mp4",
+                "scat.gold"
+            )
+        )
+        // Host de nunca-bloquear con marcadores: tampoco se veta.
+        assertFalse(
+            Blocklist.shouldVetoNavigation(
+                "https://www.youtube.com/watch?v=x&promo=1",
+                "scat.gold"
+            )
+        )
+    }
+
+    @Test
+    fun `los videos del cdn de la pagina no se bloquean ni se vetan`() {
+        // v1.1.5: bkcdn.net es el CDN de video de la pagina: el
+        // video principal puede vivir ahi. El arreglo del salto es
+        // la trampa del play, no bloquear el CDN.
+        val videos = listOf(
+            "https://z6v2p9a8.bkcdn.net/videos/5f9e7f312dbceb9a98dee33f12ff46c1c1189512.mp4",
+            "https://z6v2p9a8.bkcdn.net/videos/f95bced1177bb5b8b9b784cebe2dceeb45c0f442.mp4"
+        )
+        for (u in videos) {
+            assertFalse(
+                "el video del CDN no se bloquea: $u",
+                Blocklist.shouldBlockRequest(u, false)
+            )
+            assertFalse(
+                "la navegacion al video del CDN no se veta: $u",
+                Blocklist.shouldVetoNavigation(u, "scat.gold")
+            )
+        }
+        assertFalse(Blocklist.isBlockedHost("z6v2p9a8.bkcdn.net"))
+        assertFalse(Blocklist.isBlockedHost("bkcdn.net"))
     }
 }

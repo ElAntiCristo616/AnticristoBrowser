@@ -377,15 +377,22 @@ class BrowserActivity : AppCompatActivity() {
                             true
                         }
                     }
-                    // v1.1.4: si al tocar algo la página quiere
-                    // mandarnos a un dominio de anuncios/rastreadores
-                    // (el salto a otra página con el pop-up invasivo),
-                    // se veta y nos quedamos donde estábamos. La
-                    // navegación legítima (resultados, páginas de
-                    // video, login) no es un dominio bloqueado y pasa.
-                    // Solo dominios de la lista: nunca por marcadores
-                    // de texto, para no romper URLs legítimas.
-                    if (Blocklist.shouldVetoNavigation(url)) {
+                    // v1.1.4/v1.1.5: si al tocar algo la página
+                    // quiere mandarnos a un dominio de anuncios/
+                    // rastreadores (el salto a otra página con el
+                    // pop-up invasivo), se veta y nos quedamos donde
+                    // estábamos. v1.1.5: además se veta el salto a
+                    // OTRO host cuando la URL huele a anuncio
+                    // (marcadores de AdFilter); la navegación dentro
+                    // del mismo host nunca se veta por marcadores, y
+                    // la legítima (resultados, páginas de video,
+                    // login) pasa.
+                    val currentHost = try {
+                        android.net.Uri.parse(currentUrl).host?.lowercase()
+                    } catch (e: Exception) {
+                        null
+                    }
+                    if (Blocklist.shouldVetoNavigation(url, currentHost)) {
                         if (request.isForMainFrame) {
                             Toast.makeText(
                                 this@BrowserActivity,
@@ -420,11 +427,20 @@ class BrowserActivity : AppCompatActivity() {
                     // cargar. No toca el reproductor real ni el
                     // escaneo de videos, que ya corrió arriba.
                     ocultarAnuncios()
+                    // v1.1.5: neutralizar la trampa del botón play
+                    // (window.open anulado, clics en overlays que
+                    // tapan el video reproducen el video real).
+                    // Se repite con retraso junto con ocultarAnuncios
+                    // porque estas páginas inyectan sus anuncios
+                    // después de cargar.
+                    neutralizarTrampa()
                     lifecycleScope.launch {
                         delay(1500)
                         if (!isFinishing) ocultarAnuncios()
+                        if (!isFinishing) neutralizarTrampa()
                         delay(2500)
                         if (!isFinishing) ocultarAnuncios()
+                        if (!isFinishing) neutralizarTrampa()
                     }
                     // Si se había pausado el WebView al transmitir, se
                     // reanuda al cargar otra página.
@@ -520,6 +536,17 @@ class BrowserActivity : AppCompatActivity() {
     private fun ocultarAnuncios() {
         try {
             binding.webView.evaluateJavascript(AdFilter.HIDE_ADS_JS, null)
+        } catch (e: Exception) {
+            // Si el JS falla, la página sigue igual: no se rompe nada.
+        }
+    }
+
+    /** v1.1.5: neutraliza la trampa del botón play (ver
+     *  AdFilter.TRAP_BLOCK_JS). No toca los controles reales del
+     *  reproductor, el escaneo de videos ni el botón de transmitir. */
+    private fun neutralizarTrampa() {
+        try {
+            binding.webView.evaluateJavascript(AdFilter.TRAP_BLOCK_JS, null)
         } catch (e: Exception) {
             // Si el JS falla, la página sigue igual: no se rompe nada.
         }
